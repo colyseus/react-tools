@@ -1,8 +1,9 @@
 .item {
   border: 1px solid #ccc;
-  padding: 1em;
-  margin: 1em;
+  padding: 0.5em 1em;
   background-color: #242424;
+  corner-shape: squircle;
+  border-radius: 1em;
 }
 
 .item-type {
@@ -11,4 +12,5 @@
 
 .item-quantity {
   font-style: italic;
+  text-align: center;
 }

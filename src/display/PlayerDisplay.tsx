@@ -15,9 +15,9 @@ export const PlayerDisplay = memo(({ player }: Props) => {
 
   return (
     <div className="player" ref={highlightRef}>
-      <div className="player-name">{player.name}</div>
-      <PositionDisplay position={player.position} />
-      <ItemsDisplay items={player.inventory} />
+      <div className="player-field"><strong>Name:</strong><div>{player.name}</div></div>
+      <div className="player-field"><strong>Position:</strong><PositionDisplay position={player.position} /></div>
+      <div className="player-field"><strong>Inventory:</strong><ItemsDisplay items={player.inventory} /></div>
     </div>
   );
 });

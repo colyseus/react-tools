@@ -3,8 +3,21 @@
   padding: 1em;
   margin: 1em;
   background-color: #242424;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5em;
+  corner-shape: squircle;
+  border-radius: 1em;
 }
 
-.player-name {
-  font-weight: bold;
+.player-field {
+  display: flex;
+
+  & > :first-child {
+    min-width: 6em;
+  }
+
+  & > :last-child {
+    flex-grow: 1;
+  }
 }

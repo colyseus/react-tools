@@ -14,9 +14,8 @@ export const StateDisplay = memo(({ state }: Props) => {
 
   return (
     <div className="state" ref={highlightRef}>
-      <h2>State</h2>
-      <p><strong><code>.myString</code>:</strong> {state.myString}</p>
-      <hr />
+      <h1>State</h1>
+      <p><strong>myString:</strong> {state.myString}</p>
       <PlayersDisplay players={state.players} />
     </div>
   );

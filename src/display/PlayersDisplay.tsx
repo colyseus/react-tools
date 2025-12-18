@@ -15,7 +15,7 @@ export const PlayersDisplay = memo(({ players }: Props) => {
 
   return (
     <div className="players" ref={highlightRef}>
-      <h2><strong><code>.players</code></strong></h2>
+      <h2>Players</h2>
 
       {Object.entries(players).map(([id, player]) => (
         player !== undefined && (

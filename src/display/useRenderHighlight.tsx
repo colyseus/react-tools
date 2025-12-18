@@ -15,7 +15,7 @@ export function useRenderHighlight<T extends HTMLElement>() {
   if (ref.current) {
     const el = ref.current;
     el.classList.add('render-highlight');
-    setTimeout(() => el.classList.remove('render-highlight'), 2000);
+    setTimeout(() => el.classList.remove('render-highlight'), 1500);
   }
 
   return ref;

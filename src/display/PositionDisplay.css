@@ -1,10 +1,7 @@
 .position {
   border: 1px solid #ccc;
-  padding: 1em;
-  margin: 1em;
+  padding: 0.25em 1em;
   background-color: #242424;
-}
-
-.position-value {
-  font-weight: bold;
+  corner-shape: squircle;
+  border-radius: 1em;
 }

@@ -13,7 +13,7 @@ export const PositionDisplay = memo(({ position }: Props) => {
 
   return (
     <div className="position" ref={highlightRef}>
-      <div className="position-value">{position.x}, {position.y}</div>
+      {position.x}, {position.y}
     </div>
   );
 });

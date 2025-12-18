@@ -4,7 +4,7 @@ import { Item } from '../schema/MyRoomState';
 import { Normalized } from '../schema/useRoomState';
 import { ItemDisplay } from './ItemDisplay';
 import { useRenderHighlight } from './useRenderHighlight';
-import './ItemDisplay.css'
+import './ItemsDisplay.css'
 
 type Props = {
   items: Normalized<ArraySchema<Item>>;
@@ -15,9 +15,9 @@ export const ItemsDisplay = memo(({ items }: Props) => {
 
   return (
     <div className="items" ref={highlightRef}>
-      {items.map(item => (
-        <ItemDisplay key={item.type} item={item} />
-      ))}
+        {items.map(item => (
+          <ItemDisplay key={item.type} item={item} />
+        ))}
     </div>
   );
 });
