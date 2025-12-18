@@ -2,7 +2,7 @@ import { MapSchema } from '@colyseus/schema';
 import { memo } from 'react';
 import { Player } from '../schema/MyRoomState';
 import { Normalized } from '../schema/useRoomState';
-import { useRenderCount } from './useRenderCount';
+import { useRenderHighlight } from './useRenderHighlight';
 import { PlayerDisplay } from './PlayerDisplay';
 import './PlayersDisplay.css'
 
@@ -11,16 +11,17 @@ type Props = {
 }
 
 export const PlayersDisplay = memo(({ players }: Props) => {
-  const renderCount = useRenderCount();
+  const highlightRef = useRenderHighlight<HTMLDivElement>();
 
   return (
-    <div className="players">
-      {Object.values(players).map(player => (
+    <div className="players" ref={highlightRef}>
+      <h2><strong><code>.players</code></strong></h2>
+
+      {Object.entries(players).map(([id, player]) => (
         player !== undefined && (
-        <PlayerDisplay key={player.name} player={player} />
+          <PlayerDisplay key={id} player={player} />
         )
       ))}
-      <div className="players-render-count">Renders: {renderCount}</div>
     </div>
   );
 });

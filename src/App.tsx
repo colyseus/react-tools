@@ -1,8 +1,8 @@
-import './App.css'
-import { PlayersDisplay } from './display/PlayersDisplay';
+import { StateDisplay } from './display/StateDisplay';
 import { Player } from './schema/MyRoomState'
 import { clientState, simulatePatchState, stateCallbacks } from './schema/simulate';
 import { useRoomState } from './schema/useRoomState';
+import './App.css'
 
 /**
  * Update the string in the state.
@@ -33,23 +33,47 @@ function simulateRemovePlayer() {
   });
 }
 
+/**
+ * Adjust the position of a random player in the state.
+ */
+function simulateRenamePlayer() {
+  simulatePatchState((state) => {
+    const randomKey = Array.from(state.players.keys())[Math.floor(Math.random() * state.players.size)];
+    const player = state.players.get(randomKey);
+    if (player) {
+      player.name += ' X';
+    }
+  });
+}
+
+/**
+ * Adjust the position of a random player in the state.
+ */
+function simulateMovePlayer() {
+  simulatePatchState((state) => {
+    const randomKey = Array.from(state.players.keys())[Math.floor(Math.random() * state.players.size)];
+    const player = state.players.get(randomKey);
+    if (player) {
+      player.position.x = Math.floor(Math.random() * 100);
+      player.position.y = Math.floor(Math.random() * 100);
+    }
+  });
+}
+
 function App() {
   const state = useRoomState(clientState, stateCallbacks);
 
   return (
     <>
-      <h2>State</h2>
-      <p><strong><code>.myString</code>:</strong> {state.myString}</p>
-      <button onClick={simulateUpdateString}>Update <code>.myString</code></button>
-      <hr />
+      <StateDisplay state={state} />
 
-      <h2><strong><code>.players</code></strong></h2>
-
-      <PlayersDisplay players={state.players} />
-
-      <hr />
-      <button onClick={simulateAddPlayer}>Add player</button>
-      <button onClick={simulateRemovePlayer}>Remove player</button>
+      <div className="buttons">
+        <button onClick={simulateUpdateString}>Update <code>.myString</code></button>
+        <button onClick={simulateAddPlayer}>Add player</button>
+        <button onClick={simulateRemovePlayer}>Remove player</button>
+        <button onClick={simulateMovePlayer}>Move player</button>
+        <button onClick={simulateRenamePlayer}>Rename player</button>
+      </div>
     </>
   )
 }

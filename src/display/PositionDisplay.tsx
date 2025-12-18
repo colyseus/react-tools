@@ -1,7 +1,7 @@
 import { memo } from 'react';
 import { Position } from '../schema/MyRoomState';
 import { Normalized } from '../schema/useRoomState';
-import { useRenderCount } from './useRenderCount';
+import { useRenderHighlight } from './useRenderHighlight';
 import './PositionDisplay.css'
 
 type Props = {
@@ -9,12 +9,11 @@ type Props = {
 }
 
 export const PositionDisplay = memo(({ position }: Props) => {
-  const renderCount = useRenderCount();
+  const highlightRef = useRenderHighlight<HTMLDivElement>();
 
   return (
-    <div className="position">
+    <div className="position" ref={highlightRef}>
       <div className="position-value">{position.x}, {position.y}</div>
-      <div className="position-render-count">Renders: {renderCount}</div>
     </div>
   );
 });

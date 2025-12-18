@@ -2,12 +2,9 @@
   border: 1px solid #ccc;
   padding: 1em;
   margin: 1em;
+  background-color: #242424;
 }
 
 .player-name {
   font-weight: bold;
-}
-
-.player-render-count {
-  color: #f66;
 }

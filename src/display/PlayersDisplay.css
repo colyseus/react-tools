@@ -2,8 +2,5 @@
   border: 1px solid #ccc;
   padding: 1em;
   margin: 1em;
-}
-
-.players-render-count {
-  color: #f66;
+  background-color: #242424;
 }

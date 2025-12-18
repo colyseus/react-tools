@@ -3,7 +3,7 @@ import { ArraySchema } from '@colyseus/schema';
 import { Item } from '../schema/MyRoomState';
 import { Normalized } from '../schema/useRoomState';
 import { ItemDisplay } from './ItemDisplay';
-import { useRenderCount } from './useRenderCount';
+import { useRenderHighlight } from './useRenderHighlight';
 import './ItemDisplay.css'
 
 type Props = {
@@ -11,15 +11,13 @@ type Props = {
 }
 
 export const ItemsDisplay = memo(({ items }: Props) => {
-  const renderCount = useRenderCount();
+  const highlightRef = useRenderHighlight<HTMLDivElement>();
 
   return (
-    <div className="items">
+    <div className="items" ref={highlightRef}>
       {items.map(item => (
         <ItemDisplay key={item.type} item={item} />
       ))}
-
-      <div className="items-render-count">Renders: {renderCount}</div>
     </div>
   );
 });
