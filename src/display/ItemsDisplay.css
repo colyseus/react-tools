@@ -1,0 +1,9 @@
+.items {
+  border: 1px solid #ccc;
+  padding: 1em;
+  margin: 1em;
+}
+
+.items-render-count {
+  color: #f66;
+}

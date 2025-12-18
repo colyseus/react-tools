@@ -1,8 +1,8 @@
 import './App.css'
-
+import { PlayersDisplay } from './display/PlayersDisplay';
 import { Player } from './schema/MyRoomState'
 import { clientState, simulatePatchState, stateCallbacks } from './schema/simulate';
-import { useRoomState as useImmutableRoomState } from './schema/useRoomState';
+import { useRoomState } from './schema/useRoomState';
 
 /**
  * Update the string in the state.
@@ -34,8 +34,7 @@ function simulateRemovePlayer() {
 }
 
 function App() {
-  const state = useImmutableRoomState(clientState, stateCallbacks);
-  // const players = useRoomState(clientState, stateCallbacks, (state) => state.players);
+  const state = useRoomState(clientState, stateCallbacks);
 
   return (
     <>
@@ -45,10 +44,8 @@ function App() {
       <hr />
 
       <h2><strong><code>.players</code></strong></h2>
-
-      {Array.from(Object.entries(state.players).map(([key, value]) => (
-        <p key={key}><code>{key}</code> → <code>{JSON.stringify(value)}</code></p>
-      )))}
+      
+      <PlayersDisplay players={state.players} />
 
       <hr />
       <button onClick={simulateAddPlayer}>Add player</button>

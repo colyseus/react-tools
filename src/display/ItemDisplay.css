@@ -1,0 +1,17 @@
+.item {
+  border: 1px solid #ccc;
+  padding: 1em;
+  margin: 1em;
+}
+
+.item-type {
+  font-weight: bold;
+}
+
+.item-quantity {
+  font-style: italic;
+}
+
+.item-render-count {
+  color: #f66;
+}
