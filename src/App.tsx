@@ -9,7 +9,7 @@ import { useRoomState } from './schema/useRoomState';
  */
 function simulateUpdateString() {
   simulatePatchState((state) => {
-    state.myString = "Updated! " + Math.random();
+    state.myString = "Updated! " + Math.round(Math.random() * 1000000) / 1000000;
   });
 }
 
@@ -44,7 +44,7 @@ function App() {
       <hr />
 
       <h2><strong><code>.players</code></strong></h2>
-      
+
       <PlayersDisplay players={state.players} />
 
       <hr />

@@ -1,15 +1,16 @@
+import { memo } from 'react';
 import { Player } from '../schema/MyRoomState';
-import { useRenderCount } from './useRenderCount';
-import './PlayerDisplay.css'
+import { Normalized } from '../schema/useRoomState';
 import { ItemsDisplay } from './ItemsDisplay';
 import { PositionDisplay } from './PositionDisplay';
-import { Normalized } from '../schema/useRoomState';
+import { useRenderCount } from './useRenderCount';
+import './PlayerDisplay.css'
 
 type Props = {
   player: Normalized<Player>; // You'd normally pass in the fields rather than the player class itself, but doing it this way lets the component only re-render when the item changes.
 }
 
-export function PlayerDisplay({ player }: Props) {
+export const PlayerDisplay = memo(({ player }: Props) => {
   const renderCount = useRenderCount();
 
   return (
@@ -20,4 +21,4 @@ export function PlayerDisplay({ player }: Props) {
       <div className="player-render-count">Renders: {renderCount}</div>
     </div>
   );
-}
+});

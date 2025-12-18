@@ -1,13 +1,14 @@
+import { memo } from 'react';
 import { Position } from '../schema/MyRoomState';
+import { Normalized } from '../schema/useRoomState';
 import { useRenderCount } from './useRenderCount';
 import './PositionDisplay.css'
-import { Normalized } from '../schema/useRoomState';
 
 type Props = {
   position: Normalized<Position>; // You'd normally pass in the fields rather than the position class itself, but doing it this way lets the component only re-render when the item changes.
 }
 
-export function PositionDisplay({ position }: Props) {
+export const PositionDisplay = memo(({ position }: Props) => {
   const renderCount = useRenderCount();
 
   return (
@@ -16,4 +17,4 @@ export function PositionDisplay({ position }: Props) {
       <div className="position-render-count">Renders: {renderCount}</div>
     </div>
   );
-}
+});
