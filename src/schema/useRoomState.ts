@@ -31,6 +31,9 @@ type SchemaType = Schema | ArraySchema<any> | MapSchema<any>;
 type PathSegment = string | number;
 type ProxyGenerator = (node: SchemaType) => CallbackProxy<any>;
 
+// Sentinel value to indicate array element removal
+const REMOVE_ARRAY_ELEMENT = Symbol('REMOVE_ARRAY_ELEMENT');
+
 /**
  * Normalize Colyseus schema containers into plain JS structures:
  * - MapSchema → plain object (Record<string, ...>)
@@ -73,12 +76,13 @@ function normalize<T>(node: T): Normalized<T> {
  * @param node The Colyseus Schema, ArraySchema, or MapSchema instance.
  * @param getProxy Function to generate a callback proxy for a given node.
  * @param notifyChange Function to trigger a store update.
+ * @param getPath Function to dynamically compute the current path to this node.
  */
 function attachListeners(
     node: SchemaType,
     getProxy: ProxyGenerator,
     notifyChange: (path: PathSegment[], value: any) => void,
-    path: PathSegment[] = []
+    getPath: () => PathSegment[] = () => []
 ) {
     // Get the proxy for this specific node.
     const proxyNode = getProxy(node);
@@ -90,16 +94,25 @@ function attachListeners(
             if (child instanceof Schema || child instanceof MapSchema || child instanceof ArraySchema) {
                 // When an item is added, we must attach listeners to it so subsequent primitive changes
                 // on the *new* item are still granular.
-                attachListeners(child, getProxy, notifyChange, [...path, key]);
+                // For ArraySchema items, we need to compute the index dynamically at callback time
+                // since array indices can shift when items are removed.
+                if (node instanceof ArraySchema) {
+                    attachListeners(child, getProxy, notifyChange, () => {
+                        const currentIndex = node.indexOf(child);
+                        return [...getPath(), currentIndex];
+                    });
+                } else {
+                    attachListeners(child, getProxy, notifyChange, () => [...getPath(), key]);
+                }
             }
 
             if (node instanceof ArraySchema) {
                 // ArraySchema structural change: indices shift, so re-normalize the entire container.
-                notifyChange(path, normalize(node));
+                notifyChange(getPath(), normalize(node));
             } else {
                 // MapSchema structural change: keys are stable, so update only the new entry.
                 // We re-normalize the new child to ensure the full subtree is immutable.
-                notifyChange([...path, key], normalize(child));
+                notifyChange([...getPath(), key], normalize(child));
             }
         }, true);
     }
@@ -108,11 +121,12 @@ function attachListeners(
     if (proxyNode.onRemove) {
         proxyNode.onRemove((_child: any, key: PathSegment) => {
             if (node instanceof ArraySchema) {
-                // ArraySchema structural change: indices shift, so re-normalize the entire container.
-                notifyChange(path, normalize(node));
+                // ArraySchema removal: signal removal of the specific index.
+                // The rebuild function will slice out this element while preserving other references.
+                notifyChange([...getPath(), key], REMOVE_ARRAY_ELEMENT);
             } else {
                 // MapSchema structural change: key is stable, so update only the removed entry's path with undefined.
-                notifyChange([...path, key], undefined);
+                notifyChange([...getPath(), key], undefined);
             }
         });
     }
@@ -122,15 +136,20 @@ function attachListeners(
         for (const [key, value] of node) {
             if (value instanceof Schema || value instanceof MapSchema || value instanceof ArraySchema) {
                 // Attach listeners recursively to current children.
-                attachListeners(value, getProxy, notifyChange, [...path, key]);
+                attachListeners(value, getProxy, notifyChange, () => [...getPath(), key]);
             }
         }
     } else if (node instanceof ArraySchema) {
-        for (let key = 0; key < node.length; key++) {
-            const value = node[key];
+        for (let i = 0; i < node.length; i++) {
+            const value = node[i];
             if (value instanceof Schema || value instanceof MapSchema || value instanceof ArraySchema) {
                 // Attach listeners recursively to current children.
-                attachListeners(value, getProxy, notifyChange, [...path, key]);
+                // Capture the value (not index) so we can look up its current index dynamically.
+                const capturedValue = value;
+                attachListeners(value, getProxy, notifyChange, () => {
+                    const currentIndex = node.indexOf(capturedValue);
+                    return [...getPath(), currentIndex];
+                });
             }
         }
     } else if (node instanceof Schema) {
@@ -139,12 +158,12 @@ function attachListeners(
 
             // Recurse if the field is a nested Schema structure.
             if (value instanceof Schema || value instanceof MapSchema || value instanceof ArraySchema) {
-                attachListeners(value, getProxy, notifyChange, [...path, key]);
+                attachListeners(value, getProxy, notifyChange, () => [...getPath(), key]);
             } else if (typeof value !== 'function') {
                 // Listen for primitive changes on the Schema itself.
                 // Use the proxy to listen to specific primitive keys.
                 (proxyNode as any).listen(key, (newValue: any) => {
-                    notifyChange([...path, key], normalize(newValue));
+                    notifyChange([...getPath(), key], normalize(newValue));
                 });
             }
         }
@@ -170,33 +189,27 @@ function createColyseusStore<T extends SchemaType, U extends SchemaType = T>(
     const notifyChange = (path: PathSegment[], value: any) => {
         // Rebuild only the changed subtree, immutably.
         const rebuild = (obj: any, depth = 0): any => {
-            const key = path[depth];
-            const isLast = depth === path.length - 1;
-
-            if (isLast) {
-                if (Array.isArray(obj)) {
-                    // Array update: create a new array, copy old items, update the target index.
-                    const newArr = [...obj];
-                    newArr[key as number] = value;
-                    return newArr;
-                } else if (obj !== undefined) {
-                    // Object update: spread to create a new object, update the target key.
-                    return { ...obj, [key]: value };
-                }
-                return obj;
+            // If we've reached the end of the path, return the new value.
+            if (depth === path.length) {
+                return value;
             }
 
-            const nextKey = path[depth];
-            const nextNode = Array.isArray(obj) ? obj[nextKey as number] : obj[nextKey];
+            const key = path[depth];
+            const isLastSegment = depth === path.length - 1;
 
             if (Array.isArray(obj)) {
+                // Check if this is an array removal at the last path segment
+                if (isLastSegment && value === REMOVE_ARRAY_ELEMENT) {
+                    // Remove the element at this index, preserving references to other elements
+                    return [...obj.slice(0, key as number), ...obj.slice((key as number) + 1)];
+                }
                 // Array recursion: create a new array, recurse into the child index.
                 const newArr = [...obj];
-                newArr[nextKey as number] = rebuild(nextNode, depth + 1);
+                newArr[key as number] = rebuild(obj[key as number], depth + 1);
                 return newArr;
-            } else if (obj !== undefined) {
+            } else if (obj !== undefined && obj !== null) {
                 // Object recursion: create a new object, recurse into the child key.
-                return { ...obj, [nextKey]: rebuild(nextNode, depth + 1) };
+                return { ...obj, [key]: rebuild(obj[key], depth + 1) };
             }
 
             return obj;
