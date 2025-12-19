@@ -1,14 +1,16 @@
 import { StateDisplay } from './display/StateDisplay';
-import { Item, Player } from './schema/MyRoomState'
-import { clientState, simulatePatchState, stateCallbacks } from './schema/simulate';
+import { Item, MyRoomState, Player } from './schema/MyRoomState'
+import { simulateState } from './schema/simulateState';
 import { useRoomState } from './schema/useRoomState';
 import './App.css'
+
+const { clientState, updateState, getStateCallbacks } = simulateState(() => new MyRoomState());
 
 /**
  * Update the string in the state.
  */
 function simulateUpdateString() {
-  simulatePatchState((state) => {
+  updateState((state) => {
     state.myString = "Updated! " + Math.round(Math.random() * 1000000) / 1000000;
   });
 }
@@ -17,7 +19,7 @@ function simulateUpdateString() {
  * Add a new player to the state.
  */
 function simulateAddPlayer() {
-  simulatePatchState((state) => {
+  updateState((state) => {
     const num = (state.players.size + 1);
     state.players.set(`p-${num}`, new Player().assign({ name: "Player " + num }));
   });
@@ -27,7 +29,7 @@ function simulateAddPlayer() {
  * Remove a random player from the state.
  */
 function simulateRemovePlayer() {
-  simulatePatchState((state) => {
+  updateState((state) => {
     const randomKey = Array.from(state.players.keys())[Math.floor(Math.random() * state.players.size)];
     state.players.delete(randomKey);
   });
@@ -37,7 +39,7 @@ function simulateRemovePlayer() {
  * Adjust the position of a random player in the state.
  */
 function simulateRenamePlayer() {
-  simulatePatchState((state) => {
+  updateState((state) => {
     const randomKey = Array.from(state.players.keys())[Math.floor(Math.random() * state.players.size)];
     const player = state.players.get(randomKey);
     if (player) {
@@ -50,7 +52,7 @@ function simulateRenamePlayer() {
  * Adjust the position of a random player in the state.
  */
 function simulateMovePlayer() {
-  simulatePatchState((state) => {
+  updateState((state) => {
     const randomKey = Array.from(state.players.keys())[Math.floor(Math.random() * state.players.size)];
     const player = state.players.get(randomKey);
     if (player) {
@@ -64,7 +66,7 @@ function simulateMovePlayer() {
  * Add an item to the inventory of a random player in the state.
  */
 function simulateAddItem() {
-  simulatePatchState((state) => {
+  updateState((state) => {
     const randomKey = Array.from(state.players.keys())[Math.floor(Math.random() * state.players.size)];
     const player = state.players.get(randomKey);
     if (player) {
@@ -78,7 +80,7 @@ function simulateAddItem() {
  * Remove an item from the inventory of a random player in the state.
  */
 function simulateRemoveItem() {
-  simulatePatchState((state) => {
+  updateState((state) => {
     const playersWithItems = Array.from(state.players.values()).filter(p => p.inventory.length > 0);
     if (playersWithItems.length === 0) {
       return; // No players with items to remove from.
@@ -93,7 +95,7 @@ function simulateRemoveItem() {
  * Increment the quantity of an item in the inventory of a random player in the state.
  */
 function simulateIncrementItem() {
-  simulatePatchState((state) => {
+  updateState((state) => {
     const playersWithItems = Array.from(state.players.values()).filter(p => p.inventory.length > 0);
     if (playersWithItems.length === 0) {
       return; // No players with items to remove from.
@@ -106,7 +108,7 @@ function simulateIncrementItem() {
 }
 
 function App() {
-  const state = useRoomState(clientState, stateCallbacks);
+  const state = useRoomState(clientState, getStateCallbacks);
 
   return (
     <>
