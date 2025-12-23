@@ -1,10 +1,10 @@
 import { StateDisplay } from './display/StateDisplay';
 import { Item, MyRoomState, Player } from './schema/MyRoomState'
 import { simulateState } from './schema/simulateState';
-import { useRoomState } from './schema/useRoomState';
+import { useColyseusState } from './schema/useRoomState';
 import './App.css'
 
-const { clientState, updateState, getStateCallbacks } = simulateState(() => new MyRoomState());
+const { clientState, decoder, updateState } = simulateState(() => new MyRoomState());
 
 /**
  * Update the string in the state.
@@ -108,7 +108,7 @@ function simulateIncrementItem() {
 }
 
 function App() {
-  const state = useRoomState(clientState, getStateCallbacks);
+  const state = useColyseusState(clientState, decoder);
 
   return (
     <>

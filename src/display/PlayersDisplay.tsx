@@ -1,13 +1,13 @@
 import { MapSchema } from '@colyseus/schema';
 import { memo } from 'react';
 import { Player } from '../schema/MyRoomState';
-import { Normalized } from '../schema/useRoomState';
+import { Snapshot } from '../schema/useRoomState';
 import { useRenderHighlight } from './useRenderHighlight';
 import { PlayerDisplay } from './PlayerDisplay';
 import './PlayersDisplay.css'
 
 type Props = {
-  players: Normalized<MapSchema<Player>>;
+  players: Snapshot<MapSchema<Player>>;
 }
 
 export const PlayersDisplay = memo(({ players }: Props) => {

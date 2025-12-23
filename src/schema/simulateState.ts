@@ -1,4 +1,4 @@
-import { Decoder, Encoder, getDecoderStateCallbacks, Schema } from "@colyseus/schema"
+import { Decoder, Encoder, Schema } from "@colyseus/schema"
 
 /**
  * Create a server and client state instances, set up encoders and decoders to link them,
@@ -10,8 +10,6 @@ export function simulateState<TState extends Schema>(createState: () => TState) 
 
   const clientState = createState();
   const decoder = new Decoder(clientState);
-
-  const getStateCallbacks = getDecoderStateCallbacks(decoder);
 
   const updateState = (action: (state: TState) => void) => {
     // simulate server-side mutations
@@ -30,6 +28,6 @@ export function simulateState<TState extends Schema>(createState: () => TState) 
   return {
     clientState,
     updateState,
-    getStateCallbacks,
+    decoder,
   };
 }

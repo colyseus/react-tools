@@ -1,13 +1,13 @@
 import { memo } from 'react';
 import { Player } from '../schema/MyRoomState';
-import { Normalized } from '../schema/useRoomState';
+import { Snapshot } from '../schema/useRoomState';
 import { ItemsDisplay } from './ItemsDisplay';
 import { PositionDisplay } from './PositionDisplay';
 import { useRenderHighlight } from './useRenderHighlight';
 import './PlayerDisplay.css'
 
 type Props = {
-  player: Normalized<Player>; // You'd normally pass in the fields rather than the player class itself, but doing it this way lets the component only re-render when the item changes.
+  player: Snapshot<Player>; // You'd normally pass in the fields rather than the player class itself, but doing it this way lets the component only re-render when the item changes.
 }
 
 export const PlayerDisplay = memo(({ player }: Props) => {

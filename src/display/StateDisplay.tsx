@@ -1,12 +1,12 @@
 import { memo } from 'react';
 import { MyRoomState } from '../schema/MyRoomState';
-import { Normalized } from '../schema/useRoomState';
+import { Snapshot } from '../schema/useRoomState';
 import { useRenderHighlight } from './useRenderHighlight';
 import { PlayersDisplay } from './PlayersDisplay';
 import './StateDisplay.css'
 
 type Props = {
-  state: Normalized<MyRoomState>;
+  state: Snapshot<MyRoomState>;
 }
 
 export const StateDisplay = memo(({ state }: Props) => {

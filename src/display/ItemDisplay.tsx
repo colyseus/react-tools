@@ -1,11 +1,11 @@
 import { memo } from 'react';
 import { Item } from '../schema/MyRoomState';
-import { Normalized } from '../schema/useRoomState';
+import { Snapshot } from '../schema/useRoomState';
 import { useRenderHighlight } from './useRenderHighlight';
 import './ItemDisplay.css'
 
 type Props = {
-  item: Normalized<Item>; // You'd normally pass in the fields rather than the item class itself, but doing it this way lets the component only re-render when the item changes.
+  item: Snapshot<Item>; // You'd normally pass in the fields rather than the item class itself, but doing it this way lets the component only re-render when the item changes.
 }
 
 export const ItemDisplay = memo(({ item }: Props) => {

@@ -1,13 +1,13 @@
 import { memo } from 'react';
 import { ArraySchema } from '@colyseus/schema';
+import { Snapshot } from '../schema/createSnapshot';
 import { Item } from '../schema/MyRoomState';
-import { Normalized } from '../schema/useRoomState';
 import { ItemDisplay } from './ItemDisplay';
 import { useRenderHighlight } from './useRenderHighlight';
 import './ItemsDisplay.css'
 
 type Props = {
-  items: Normalized<ArraySchema<Item>>;
+  items: Snapshot<ArraySchema<Item>>;
 }
 
 export const ItemsDisplay = memo(({ items }: Props) => {

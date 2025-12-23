@@ -1,13 +1,13 @@
 import { renderHook, act } from '@testing-library/react';
 import { describe, expect, test } from 'vitest'
-import { useRoomState } from '../schema/useRoomState';
+import { useColyseusState } from '../schema/useColyseusState';
 import { simulateState } from '../schema/simulateState';
 import { Item, MyRoomState, Player } from '../schema/MyRoomState';
 
 test('reassign field on root object', () => {
-    const { clientState, updateState, getStateCallbacks } = simulateState(() => new MyRoomState());
+    const { clientState, decoder, updateState } = simulateState(() => new MyRoomState());
     
-    const { result } = renderHook(() => useRoomState(clientState, getStateCallbacks));
+    const { result } = renderHook(() => useColyseusState(clientState, decoder));
 
     const firstImmutableState = result.current;
 
@@ -31,9 +31,9 @@ test('reassign field on root object', () => {
 });
 
 describe('adding & removing players', () => {
-    const { clientState, updateState, getStateCallbacks } = simulateState(() => new MyRoomState());
+    const { clientState, decoder, updateState } = simulateState(() => new MyRoomState());
     
-    const { result } = renderHook(() => useRoomState(clientState, getStateCallbacks));
+    const { result } = renderHook(() => useColyseusState(clientState, decoder));
 
     // Put one player into the state.
     act(() => {
@@ -106,9 +106,9 @@ describe('adding & removing players', () => {
 });
 
 describe('updating player positions', () => {
-    const { clientState, updateState, getStateCallbacks } = simulateState(() => new MyRoomState());
+    const { clientState, decoder, updateState } = simulateState(() => new MyRoomState());
     
-    const { result } = renderHook(() => useRoomState(clientState, getStateCallbacks));
+    const { result } = renderHook(() => useColyseusState(clientState, decoder));
 
     // Put two players into the state.
     act(() => {
@@ -194,9 +194,9 @@ describe('updating player positions', () => {
 });
 
 describe('updating inventory items', () => {
-    const { clientState, updateState, getStateCallbacks } = simulateState(() => new MyRoomState());
+    const { clientState, decoder, updateState } = simulateState(() => new MyRoomState());
     
-    const { result } = renderHook(() => useRoomState(clientState, getStateCallbacks));
+    const { result } = renderHook(() => useColyseusState(clientState, decoder));
 
     // Put two players into the state.
     act(() => {
@@ -357,15 +357,10 @@ describe('updating inventory items', () => {
     });
 });
 
-// NOTE: The following tests are skipped because @colyseus/schema@3.0.21 has a bug where
-// splice/shift operations on ArraySchema corrupt the state during encode/decode cycles.
-// When an item is removed from the beginning or middle of an array, the resulting client
-// state is incorrect (e.g., removing 1 item from a 3-item array results in 1 item instead of 2).
-// These tests document the expected behavior once the Colyseus bug is fixed.
-describe.skip('array index stability after removal', () => {
-    const { clientState, updateState, getStateCallbacks } = simulateState(() => new MyRoomState());
+describe('array index stability after removal', () => {
+    const { clientState, decoder, updateState } = simulateState(() => new MyRoomState());
     
-    const { result } = renderHook(() => useRoomState(clientState, getStateCallbacks));
+    const { result } = renderHook(() => useColyseusState(clientState, decoder));
 
     // Set up a player with multiple inventory items.
     act(() => {
@@ -490,9 +485,9 @@ describe.skip('array index stability after removal', () => {
 });
 
 describe('multiple simultaneous changes', () => {
-    const { clientState, updateState, getStateCallbacks } = simulateState(() => new MyRoomState());
+    const { clientState, decoder, updateState } = simulateState(() => new MyRoomState());
     
-    const { result } = renderHook(() => useRoomState(clientState, getStateCallbacks));
+    const { result } = renderHook(() => useColyseusState(clientState, decoder));
 
     // Put two players into the state.
     act(() => {
