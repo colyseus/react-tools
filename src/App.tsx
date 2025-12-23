@@ -70,8 +70,14 @@ function simulateAddItem() {
     const randomKey = Array.from(state.players.keys())[Math.floor(Math.random() * state.players.size)];
     const player = state.players.get(randomKey);
     if (player) {
-      const itemType = ['Sword', 'Shield', 'Potion', 'Bow'][Math.floor(Math.random() * 4)];
-      player.inventory.push(new Item(itemType));
+      const allItemTypes = ['Sword', 'Shield', 'Potion', 'Bow', 'Armor', 'Ring', 'Amulet', 'Staff', 'Dagger', 'Helmet'];
+      const existingTypes = new Set(player.inventory.map(item => item.type));
+      const availableTypes = allItemTypes.filter(type => !existingTypes.has(type));
+      
+      if (availableTypes.length > 0) {
+        const itemType = availableTypes[Math.floor(Math.random() * availableTypes.length)];
+        player.inventory.push(new Item(itemType));
+      }
     }
   });
 }
