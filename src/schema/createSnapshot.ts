@@ -136,7 +136,7 @@ function createSnapshotForSchema(
     const snapshotted: Record<string, any> = {};
     let hasChanged = previousResult === undefined;
 
-    // Get Coleseus schema field definitions, if present.
+    // Get Colyseus schema field definitions, if present.
     const fieldDefinitions = (node as any)._definition?.fields;
 
     if (fieldDefinitions) {
