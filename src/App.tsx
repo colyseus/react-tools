@@ -1,7 +1,7 @@
 import { StateDisplay } from './display/StateDisplay';
 import { Item, MyRoomState, Player } from './schema/MyRoomState'
 import { simulateState } from './schema/simulateState';
-import { useColyseusState } from './schema/useRoomState';
+import { useColyseusState } from './schema/useColyseusState';
 import './App.css'
 
 const { clientState, decoder, updateState } = simulateState(() => new MyRoomState());
