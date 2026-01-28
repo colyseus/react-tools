@@ -1,7 +1,7 @@
 import { MapSchema } from '@colyseus/schema';
 import { memo } from 'react';
 import { Player } from '../schema/MyRoomState';
-import { Snapshot } from '../schema/createSnapshot';
+import { Snapshot } from '../../../src';
 import { useRenderHighlight } from './useRenderHighlight';
 import { PlayerDisplay } from './PlayerDisplay';
 import './PlayersDisplay.css'

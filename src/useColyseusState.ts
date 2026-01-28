@@ -1,7 +1,7 @@
 import { Schema, Decoder } from "@colyseus/schema";
 import { useSyncExternalStore, useEffect } from "react";
-import { createSnapshot, Snapshot, SnapshotContext } from './createSnapshot';
-import { getOrCreateSubscription } from './getOrCreateSubscription';
+import { createSnapshot, Snapshot, SnapshotContext } from './schema/createSnapshot';
+import { getOrCreateSubscription } from './schema/getOrCreateSubscription';
 
 /**
  * React hook that provides immutable snapshots of Colyseus room state

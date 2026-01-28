@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { Player } from '../schema/MyRoomState';
-import { Snapshot } from '../schema/createSnapshot';
+import { Snapshot } from '../../../src';
 import { ItemsDisplay } from './ItemsDisplay';
 import { PositionDisplay } from './PositionDisplay';
 import { useRenderHighlight } from './useRenderHighlight';

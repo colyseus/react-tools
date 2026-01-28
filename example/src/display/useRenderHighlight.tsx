@@ -13,7 +13,7 @@ export function useRenderHighlight<T extends HTMLElement>() {
   // This runs on every render. It will only work as expected within a memoized component.
   // We use a ref to manipulate the DOM directly, avoiding re-render loops.
   if (ref.current) {
-    const el = ref.current;
+    const el = ref.current as unknown as HTMLElement;
     el.classList.add('render-highlight');
     setTimeout(() => el.classList.remove('render-highlight'), 1500);
   }
@@ -22,7 +22,7 @@ export function useRenderHighlight<T extends HTMLElement>() {
   // New elements should be highlighted when they are added.
   useEffect(() => {
     if (ref.current) {
-      const el = ref.current;
+      const el = ref.current as unknown as HTMLElement;
       el.classList.add('render-highlight');
       setTimeout(() => el.classList.remove('render-highlight'), 1500);
     }

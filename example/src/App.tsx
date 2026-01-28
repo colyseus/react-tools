@@ -1,7 +1,7 @@
 import { StateDisplay } from './display/StateDisplay';
 import { Item, MyRoomState, Player } from './schema/MyRoomState'
 import { simulateState } from './schema/simulateState';
-import { useColyseusState } from './schema/useColyseusState';
+import { useRoomState } from '../../src'; // Importing from library source for now
 import './App.css'
 
 const { clientState, decoder, updateState } = simulateState(() => new MyRoomState());
@@ -114,11 +114,17 @@ function simulateIncrementItem() {
 }
 
 function App() {
-  const state = useColyseusState(clientState, decoder);
+  // Mock a Room object for useRoomState
+  const room = {
+    state: clientState,
+    serializer: { decoder }
+  } as any; /* eslint-disable-line @typescript-eslint/no-explicit-any */
+  const state = useRoomState<MyRoomState>(room);
 
   return (
     <>
-      <StateDisplay state={state} />
+      {state && <StateDisplay state={state} />}
+
 
       <div className="buttons">
         <button onClick={simulateUpdateString}>Update <code>.myString</code></button>

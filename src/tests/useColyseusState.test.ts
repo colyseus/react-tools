@@ -1,12 +1,15 @@
+import 'reflect-metadata';
 import { renderHook, act } from '@testing-library/react';
 import { describe, expect, test } from 'vitest'
 import { useColyseusState } from '../schema/useColyseusState';
-import { simulateState } from '../schema/simulateState';
-import { Item, MyRoomState, Player } from '../schema/MyRoomState';
+import { simulateState } from './schema/simulateState';
+import { Item, MyRoomState, Player } from './schema/MyRoomState';
+import { LargeArrayState, Cell } from './schema/LargeArrayState';
+import { Encoder } from "@colyseus/schema";
 
 test('reassign field on root object', () => {
     const { clientState, decoder, updateState } = simulateState(() => new MyRoomState());
-    
+
     const { result } = renderHook(() => useColyseusState(clientState, decoder));
 
     const firstImmutableState = result.current;
@@ -32,7 +35,7 @@ test('reassign field on root object', () => {
 
 describe('adding & removing players', () => {
     const { clientState, decoder, updateState } = simulateState(() => new MyRoomState());
-    
+
     const { result } = renderHook(() => useColyseusState(clientState, decoder));
 
     // Put one player into the state.
@@ -44,7 +47,7 @@ describe('adding & removing players', () => {
 
     test('adding second player doesn\'t reallocate first', () => {
         const stateBeforeAdding = result.current;
-        
+
         // Add a second player into the state.
         act(() => {
             updateState((state) => {
@@ -107,7 +110,7 @@ describe('adding & removing players', () => {
 
 describe('updating player positions', () => {
     const { clientState, decoder, updateState } = simulateState(() => new MyRoomState());
-    
+
     const { result } = renderHook(() => useColyseusState(clientState, decoder));
 
     // Put two players into the state.
@@ -159,7 +162,7 @@ describe('updating player positions', () => {
         // The p2 inventory reference should be the same.
         expect(stateBeforeAdjusting.players["p2"].inventory).toBe(stateAfterAdjusting.players["p2"].inventory);
     });
-    
+
     test('updating p1 position does not reallocate p2', () => {
         const stateBeforeAdjusting = result.current;
 
@@ -195,7 +198,7 @@ describe('updating player positions', () => {
 
 describe('updating inventory items', () => {
     const { clientState, decoder, updateState } = simulateState(() => new MyRoomState());
-    
+
     const { result } = renderHook(() => useColyseusState(clientState, decoder));
 
     // Put two players into the state.
@@ -359,7 +362,7 @@ describe('updating inventory items', () => {
 
 describe('array index stability after removal', () => {
     const { clientState, decoder, updateState } = simulateState(() => new MyRoomState());
-    
+
     const { result } = renderHook(() => useColyseusState(clientState, decoder));
 
     // Set up a player with multiple inventory items.
@@ -388,10 +391,10 @@ describe('array index stability after removal', () => {
         });
 
         const state = result.current;
-        
+
         // Array should now have 2 items.
         expect(state.players["p1"].inventory.length).toBe(2);
-        
+
         // Items should have shifted: "Item 1" is now at index 0, "Item 2" at index 1.
         expect(state.players["p1"].inventory[0].type).toBe("Item 1");
         expect(state.players["p1"].inventory[0].quantity).toBe(20);
@@ -415,10 +418,10 @@ describe('array index stability after removal', () => {
         // The item at index 0 should have the new quantity.
         expect(stateAfterUpdate.players["p1"].inventory[0].quantity).toBe(999);
         expect(stateAfterUpdate.players["p1"].inventory[0].type).toBe("Item 1");
-        
+
         // The item reference should have changed (it was updated).
         expect(stateBeforeUpdate.players["p1"].inventory[0]).not.toBe(stateAfterUpdate.players["p1"].inventory[0]);
-        
+
         // The other item should be unchanged.
         expect(stateBeforeUpdate.players["p1"].inventory[1]).toBe(stateAfterUpdate.players["p1"].inventory[1]);
     });
@@ -452,11 +455,11 @@ describe('array index stability after removal', () => {
 
         // Array should now have 2 items.
         expect(stateAfterRemoval.players["p1"].inventory.length).toBe(2);
-        
+
         // "A" should still be at index 0, same reference.
         expect(stateAfterRemoval.players["p1"].inventory[0].type).toBe("A");
         expect(stateAfterRemoval.players["p1"].inventory[0]).toBe(itemA);
-        
+
         // "C" should now be at index 1, same reference (just shifted).
         expect(stateAfterRemoval.players["p1"].inventory[1].type).toBe("C");
         expect(stateAfterRemoval.players["p1"].inventory[1]).toBe(itemC);
@@ -486,7 +489,7 @@ describe('array index stability after removal', () => {
 
 describe('multiple simultaneous changes', () => {
     const { clientState, decoder, updateState } = simulateState(() => new MyRoomState());
-    
+
     const { result } = renderHook(() => useColyseusState(clientState, decoder));
 
     // Put two players into the state.
@@ -572,5 +575,65 @@ describe('multiple simultaneous changes', () => {
         // Position and inventory should be unchanged.
         expect(stateBeforeUpdating.players["p1"].position).toBe(stateAfterUpdating.players["p1"].position);
         expect(stateBeforeUpdating.players["p1"].inventory).toBe(stateAfterUpdating.players["p1"].inventory);
+    });
+});
+
+describe('performance with large arrays', () => {
+    Encoder.BUFFER_SIZE = 64 * 1024; // 64KB buffer to handle large states
+    test('demonstrates performance issue with 2500 item array', () => {
+        const { clientState, decoder, updateState } = simulateState(() => {
+            const state = new LargeArrayState();
+
+            // Create a 50x50 board
+            for (let i = 0; i < 2500; i++) {
+                const cell = new Cell();
+                cell.value = 0;
+                cell.revealed = false;
+                state.cells.push(cell);
+            }
+
+            return state;
+        });
+
+        const { result } = renderHook(() => useColyseusState(clientState, decoder));
+
+        expect(result.current.cells.length).toBe(2500);
+
+        // Measure: Update ONLY ONE cell
+        const updateOneStart = performance.now();
+
+        act(() => {
+            updateState((state) => {
+                state.cells[1234].revealed = true; // Change just ONE cell
+            });
+        });
+
+        const updateOneEnd = performance.now();
+        const updateOneDuration = updateOneEnd - updateOneStart;
+
+        console.log(`--- Updating one cell in 2500 item array ---`);
+        console.log(`Time: ${updateOneDuration.toFixed(2)}ms`);
+
+        const rerenderStart = performance.now();
+
+        act(() => {
+            updateState((state) => {
+                state.counter++; // Change unrelated field
+            });
+        });
+
+        const rerenderEnd = performance.now();
+        const rerenderDuration = rerenderEnd - rerenderStart;
+
+        console.log(`--- Simulating re-render with unrelated state change ---`);
+        console.log(`Time: ${rerenderDuration.toFixed(2)}ms`);
+        //Note: This still triggers full array iteration!
+
+        // Verify the change worked
+        expect(result.current.cells[1234].revealed).toBe(true);
+        expect(result.current.counter).toBe(1);
+
+        // The problem: both updates take similar time because
+        // createSnapshot iterates the entire 2500 item array
     });
 });

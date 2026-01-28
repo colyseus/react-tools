@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { ArraySchema } from '@colyseus/schema';
-import { Snapshot } from '../schema/createSnapshot';
+import { Snapshot } from '../../../src';
 import { Item } from '../schema/MyRoomState';
 import { ItemDisplay } from './ItemDisplay';
 import { useRenderHighlight } from './useRenderHighlight';
@@ -15,9 +15,9 @@ export const ItemsDisplay = memo(({ items }: Props) => {
 
   return (
     <div className="items" ref={highlightRef}>
-        {items.map(item => (
-          <ItemDisplay key={item.type} item={item} />
-        ))}
+      {items.map(item => (
+        <ItemDisplay key={item.type} item={item} />
+      ))}
     </div>
   );
 });
