@@ -44,29 +44,53 @@ export type Snapshot<T> = DeepReadonly<
 export interface SnapshotContext {
     /** Map of refId → Schema object from decoder.root.refs */
     refs: Map<number, any> | undefined;
+    /** Reverse lookup: Schema object → refId (built lazily) */
+    objectToRefId: Map<object, number> | undefined;
     /** Snapshot results from the previous render pass */
     previousResultsByRefId: Map<number, any>;
     /** Snapshot results from the current render pass (for cycle detection) */
     currentResultsByRefId: Map<number, any>;
+    /** Set of refIds that have been modified since the last snapshot */
+    dirtyRefIds: Set<number>;
+    /** Map of childRefId → parentRefId for ancestor tracking */
+    parentRefIdMap: Map<number, number>;
+    /** Current parent refId during traversal (used to build parentRefIdMap) */
+    currentParentRefId: number;
 }
 
 /**
- * Finds the refId for a Schema object by searching the decoder's refs map.
+ * Builds a reverse lookup map from objects to their refIds.
+ */
+function buildObjectToRefIdMap(refs: Map<number, any>): Map<object, number> {
+    const map = new Map<object, number>();
+    for (const [refId, obj] of refs.entries()) {
+        if (obj !== null && typeof obj === "object") {
+            map.set(obj, refId);
+        }
+    }
+    return map;
+}
+
+/**
+ * Finds the refId for a Schema object using the reverse lookup map.
  * 
  * In Colyseus 3.x, each Schema instance is assigned a unique numeric refId
  * that remains stable across encode/decode cycles. This allows us to track
  * object identity even when the JavaScript object references change.
  * 
  * @param node - The Schema object to find the refId for
- * @param refs - The decoder.root.refs map
+ * @param ctx - The snapshot context with the reverse lookup map
  * @returns The refId if found, or -1 if not found
  */
-function findRefId(node: object, refs: Map<number, any> | undefined): number {
-    if (!refs) return -1;
-    for (const [refId, obj] of refs.entries()) {
-        if (obj === node) return refId;
+function findRefId(node: object, ctx: SnapshotContext): number {
+    if (!ctx.refs) return -1;
+    
+    // Build the reverse lookup map lazily on first use.
+    if (!ctx.objectToRefId) {
+        ctx.objectToRefId = buildObjectToRefIdMap(ctx.refs);
     }
-    return -1;
+    
+    return ctx.objectToRefId.get(node) ?? -1;
 }
 
 /**
@@ -109,13 +133,14 @@ function createSnapshotForArraySchema(
     previousResult: any[] | undefined,
     ctx: SnapshotContext
 ): any[] {
-    const items = Array.from(node);
-    const snapshotted: any[] = [];
-    let hasChanged = !previousResult || !Array.isArray(previousResult) || items.length !== previousResult.length;
+    const length = node.length;
+    let hasChanged = !previousResult || !Array.isArray(previousResult) || length !== previousResult.length;
 
-    for (let i = 0; i < items.length; i++) {
-        const snapshottedValue = createSnapshot(items[i], ctx);
-        snapshotted.push(snapshottedValue);
+    const snapshotted: any[] = new Array(length);
+
+    for (let i = 0; i < length; i++) {
+        const snapshottedValue = createSnapshot(node.at(i), ctx);
+        snapshotted[i] = snapshottedValue;
 
         if (!hasChanged && previousResult && previousResult[i] !== snapshottedValue) {
             hasChanged = true;
@@ -187,17 +212,17 @@ function createSnapshotForSchema(
  */
 export function createSnapshot<T>(node: T, ctx: SnapshotContext): Snapshot<T> {
     // Pass through primitives and null/undefined.
-    if (
-        node === null ||
-        node === undefined ||
-        typeof node !== "object" ||
-        typeof node === "function"
-    ) {
+    if (node === null || node === undefined || typeof node !== "object") {
         return node as Snapshot<T>;
     }
 
     // Find the stable refId for this object.
-    const refId = findRefId(node, ctx.refs);
+    const refId = findRefId(node, ctx);
+
+    // Record the parent relationship for ancestor tracking.
+    if (refId !== -1 && ctx.currentParentRefId !== -1) {
+        ctx.parentRefIdMap.set(refId, ctx.currentParentRefId);
+    }
 
     // Check if we've already snapshotted this object in the current pass (cycle detection).
     if (refId !== -1 && ctx.currentResultsByRefId.has(refId)) {
@@ -206,6 +231,18 @@ export function createSnapshot<T>(node: T, ctx: SnapshotContext): Snapshot<T> {
 
     // Get the previous result for structural sharing comparison.
     const previousResult = refId !== -1 ? ctx.previousResultsByRefId.get(refId) : undefined;
+
+    // If this node is not dirty and we have a previous result,
+    // we can skip the entire subtree. With ancestor tracking, if any descendant
+    // changed, this node would have been marked dirty too.
+    if (refId !== -1 && previousResult !== undefined && !ctx.dirtyRefIds.has(refId)) {
+        ctx.currentResultsByRefId.set(refId, previousResult);
+        return previousResult as Snapshot<T>;
+    }
+
+    // Set this node as the parent for any children we process.
+    const savedParentRefId = ctx.currentParentRefId;
+    ctx.currentParentRefId = refId;
 
     let result: any;
 
@@ -220,7 +257,8 @@ export function createSnapshot<T>(node: T, ctx: SnapshotContext): Snapshot<T> {
         result = node;
     }
 
-    // Cache the result for this snapshot pass.
+    // Restore parent and cache result.
+    ctx.currentParentRefId = savedParentRefId;
     if (refId !== -1) {
         ctx.currentResultsByRefId.set(refId, result);
     }
