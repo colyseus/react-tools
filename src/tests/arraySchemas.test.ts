@@ -128,6 +128,32 @@ describe('arrays at root level', () => {
       expect(stateAfter.tasks[0]).toBe(task1Before);
       expect(stateAfter.tasks[2]).toBe(task3Before);
     });
+
+    test('modifying last task changes its reference but not others', () => {
+      const stateBefore = result.current;
+      const task1Before = stateBefore.tasks[0];
+      const task2Before = stateBefore.tasks[1];
+
+      act(() => {
+        updateState((state) => {
+          state.tasks[2].priority = 10;
+        });
+      });
+
+      const stateAfter = result.current;
+
+      // Root and array should have changed
+      expect(stateBefore).not.toBe(stateAfter);
+      expect(stateBefore.tasks).not.toBe(stateAfter.tasks);
+
+      // Last task should have changed
+      expect(stateBefore.tasks[2]).not.toBe(stateAfter.tasks[2]);
+      expect(stateAfter.tasks[2].priority).toBe(10);
+
+      // Other tasks should be unchanged
+      expect(stateAfter.tasks[0]).toBe(task1Before);
+      expect(stateAfter.tasks[1]).toBe(task2Before);
+    });
   });
 
   describe('removing objects from array', () => {
