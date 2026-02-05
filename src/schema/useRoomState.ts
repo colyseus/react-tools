@@ -1,5 +1,5 @@
 import { Schema } from "@colyseus/schema";
-import { Room } from "colyseus.js";
+import { Room } from "@colyseus/sdk";
 import { Snapshot } from './createSnapshot';
 import { useColyseusState } from './useColyseusState';
 
@@ -29,11 +29,11 @@ import { useColyseusState } from './useColyseusState';
  * const players = useRoomState(room, (s) => s.players);
  * ```
  */
-export function useRoomState<T extends Schema = Schema, U = T>(
-    room: Room<T>,
+export function useRoomState<T extends Schema, U = T>(
+    room: Room<{state: T}>,
     selector: (state: T) => U = (s) => s as unknown as U
 ): Snapshot<U> | undefined {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const decoder = (room as any)?.serializer?.decoder;
-    return useColyseusState(room.state, decoder, selector);
+    const decoder = (room.serializer as any).decoder;
+    return useColyseusState(room.state as T, decoder, selector);
 }

@@ -16,20 +16,17 @@
     }
   },
   "peerDependencies": {
-    "@colyseus/schema": ">=3.0.74",
-    "colyseus.js": "^0.16.22",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
-  "dependencies": {},
   "devDependencies": {
-    "@colyseus/schema": ">=3.0.74",
+    "@colyseus/schema": "^4.0.8",
+    "@colyseus/sdk": "^0.17.26",
     "@eslint/js": "^9.9.0",
     "@testing-library/react": "^16.3.1",
     "@types/react": "^18.3.3",
     "@types/react-dom": "^18.3.0",
     "buffer": "^6.0.3",
-    "colyseus.js": "^0.16.22",
     "eslint": "^9.9.0",
     "eslint-plugin-react-hooks": "^5.1.0-rc.0",
     "eslint-plugin-react-refresh": "^0.4.9",

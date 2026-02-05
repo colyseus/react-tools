@@ -11,11 +11,11 @@
     },
     "dependencies": {
         "@colyseus/react": "file:..",
-        "@colyseus/schema": ">=3.0.74",
-        "colyseus.js": "^0.16.22",
+        "@colyseus/schema": "^4.0.8",
+        "@colyseus/sdk": "^0.17.26",
+        "buffer": "^6.0.3",
         "react": "^18.3.1",
-        "react-dom": "^18.3.1",
-        "buffer": "^6.0.3"
+        "react-dom": "^18.3.1"
     },
     "devDependencies": {
         "@types/react": "^18.3.3",

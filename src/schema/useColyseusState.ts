@@ -30,7 +30,7 @@ import { getOrCreateSubscription } from './getOrCreateSubscription';
  * const players = useColyseusState(room.state, decoder, (s) => s.players);
  * ```
  */
-export function useColyseusState<T extends Schema = Schema, U = T>(
+export function useColyseusState<T extends Schema, U = T>(
     roomState: T,
     decoder: Decoder,
     selector: (state: T) => U = (s) => s as unknown as U
