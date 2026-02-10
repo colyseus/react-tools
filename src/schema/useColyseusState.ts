@@ -1,5 +1,5 @@
 import { Schema, Decoder } from "@colyseus/schema";
-import { useSyncExternalStore, useEffect } from "react";
+import { useCallback, useRef, useSyncExternalStore, useEffect } from "react";
 import { createSnapshot, Snapshot, SnapshotContext } from './createSnapshot';
 import { getOrCreateSubscription } from './getOrCreateSubscription';
 
@@ -42,13 +42,20 @@ export function useColyseusState<T extends Schema, U = T>(
         }
     }, [roomState, decoder]);
 
-    const getSnapshot = () => {
+    // Keep selector ref up to date so that getSnapshot can use the latest selector
+    // without needing to be reassigned.
+    const selectorRef = useRef(selector);
+    selectorRef.current = selector;
+
+    // The getSnapshot callback is stable, and only changes when roomState/decoder change,
+    // preventing useSyncExternalStore from treating every render as a new store.
+    const getSnapshot = useCallback(() => {
         if (!roomState || !decoder) {
             return undefined as Snapshot<U>;
         }
 
         const subscription = getOrCreateSubscription(roomState, decoder);
-        const selectedState = selector(roomState);
+        const selectedState = selectorRef.current(roomState);
 
         // Create context for this snapshot pass.
         const ctx: SnapshotContext = {
@@ -86,9 +93,11 @@ export function useColyseusState<T extends Schema, U = T>(
         }
 
         return result;
-    };
+    }, [roomState, decoder]);
 
-    const subscribe = (callback: () => void) => {
+    // The subscribe callback is stable, and only changes when roomState/decoder change,
+    // so React does not re-subscribe (and risk missing notifications) on every render.
+    const subscribe = useCallback((callback: () => void) => {
         if (!roomState || !decoder) {
             return () => { };
         }
@@ -96,7 +105,7 @@ export function useColyseusState<T extends Schema, U = T>(
         const subscription = getOrCreateSubscription(roomState, decoder);
         subscription.listeners.add(callback);
         return () => subscription.listeners.delete(callback);
-    };
+    }, [roomState, decoder]);
 
     return useSyncExternalStore(subscribe, getSnapshot);
 }
