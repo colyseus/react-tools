@@ -1,7 +1,8 @@
 import 'reflect-metadata';
 import { renderHook, act } from '@testing-library/react';
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test, vi } from 'vitest'
 import { useColyseusState } from '../schema/useColyseusState';
+import { getOrCreateSubscription } from '../schema/getOrCreateSubscription';
 import { simulateState } from './schema/simulateState';
 import { Item, MyRoomState, Player } from './schema/MyRoomState';
 import { LargeArrayState, Cell } from './schema/LargeArrayState';
@@ -635,5 +636,129 @@ describe('performance with large arrays', () => {
 
         // The problem: both updates take similar time because
         // createSnapshot iterates the entire 2500 item array
+    });
+});
+
+describe('subscribe stability', () => {
+    test('does not re-subscribe on re-render', () => {
+        const { clientState, decoder } = simulateState(() => new MyRoomState());
+        const subscription = getOrCreateSubscription(clientState, decoder);
+
+        const addSpy = vi.spyOn(subscription.listeners, 'add');
+        const deleteSpy = vi.spyOn(subscription.listeners, 'delete');
+
+        const { rerender } = renderHook(() => useColyseusState(clientState, decoder));
+
+        // After the initial mount, subscribe should have been called once.
+        const addCountAfterMount = addSpy.mock.calls.length;
+        expect(addCountAfterMount).toBeGreaterThanOrEqual(1);
+
+        // Force a re-render with identical props.
+        rerender();
+
+        // With a stable subscribe callback React should NOT re-subscribe,
+        // so no additional add/delete calls should have been made.
+        expect(addSpy).toHaveBeenCalledTimes(addCountAfterMount);
+        expect(deleteSpy).not.toHaveBeenCalled();
+
+        addSpy.mockRestore();
+        deleteSpy.mockRestore();
+    });
+
+    test('does not re-subscribe after a state change', () => {
+        const { clientState, decoder, updateState } = simulateState(() => new MyRoomState());
+        const subscription = getOrCreateSubscription(clientState, decoder);
+
+        const addSpy = vi.spyOn(subscription.listeners, 'add');
+        const deleteSpy = vi.spyOn(subscription.listeners, 'delete');
+
+        const { result } = renderHook(() => useColyseusState(clientState, decoder));
+
+        const addCountAfterMount = addSpy.mock.calls.length;
+
+        act(() => {
+            updateState((state) => {
+                state.myString = "Changed";
+            });
+        });
+
+        // After a state-driven re-render, subscribe should not have been
+        // called again — the callback identity must stay stable.
+        expect(addSpy).toHaveBeenCalledTimes(addCountAfterMount);
+        expect(deleteSpy).not.toHaveBeenCalled();
+
+        // The state should still be updated correctly.
+        expect(result.current.myString).toBe("Changed");
+
+        addSpy.mockRestore();
+        deleteSpy.mockRestore();
+    });
+
+    test('does not re-subscribe after multiple sequential state changes', () => {
+        const { clientState, decoder, updateState } = simulateState(() => new MyRoomState());
+        const subscription = getOrCreateSubscription(clientState, decoder);
+
+        const addSpy = vi.spyOn(subscription.listeners, 'add');
+        const deleteSpy = vi.spyOn(subscription.listeners, 'delete');
+
+        const { result } = renderHook(() => useColyseusState(clientState, decoder));
+
+        const addCountAfterMount = addSpy.mock.calls.length;
+
+        act(() => {
+            updateState((state) => {
+                state.myString = "First";
+            });
+        });
+        expect(result.current.myString).toBe("First");
+
+        act(() => {
+            updateState((state) => {
+                state.myString = "Second";
+            });
+        });
+        expect(result.current.myString).toBe("Second");
+
+        act(() => {
+            updateState((state) => {
+                state.players.set("p1", new Player().assign({ name: "Player 1" }));
+            });
+        });
+        expect(result.current.players["p1"].name).toBe("Player 1");
+
+        // After three state-driven re-renders, subscribe should still only
+        // have been called once (during mount).
+        expect(addSpy).toHaveBeenCalledTimes(addCountAfterMount);
+        expect(deleteSpy).not.toHaveBeenCalled();
+
+        addSpy.mockRestore();
+        deleteSpy.mockRestore();
+    });
+
+    test('exactly one listener is registered during normal operation', () => {
+        const { clientState, decoder, updateState } = simulateState(() => new MyRoomState());
+        const subscription = getOrCreateSubscription(clientState, decoder);
+
+        const { rerender } = renderHook(() => useColyseusState(clientState, decoder));
+
+        expect(subscription.listeners.size).toBe(1);
+
+        // Re-render several times.
+        rerender();
+        rerender();
+        rerender();
+
+        // Should still be exactly one listener, not accumulating.
+        expect(subscription.listeners.size).toBe(1);
+
+        // Change state and re-render.
+        act(() => {
+            updateState((state) => {
+                state.myString = "test";
+            });
+        });
+
+        // Should still be exactly one listener, after the state change.
+        expect(subscription.listeners.size).toBe(1);
     });
 });

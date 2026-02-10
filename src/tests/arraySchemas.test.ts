@@ -226,7 +226,6 @@ describe('arrays at root level', () => {
 
     test('removing middle task with splice keeps appropriate references', () => {
       const stateBefore = result.current;
-      const taskBBefore = stateBefore.tasks[0]; // Task B is now at index 0
       const taskCBefore = stateBefore.tasks[1]; // Task C is now at index 1
 
       act(() => {
