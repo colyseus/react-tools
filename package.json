@@ -1,12 +1,13 @@
 {
   "name": "@colyseus/react",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "tsdown --watch --format esm,cjs",
     "build": "tsdown --format esm,cjs",
     "lint": "eslint .",
-    "test": "vitest"
+    "test": "vitest",
+    "prepublishOnly": "npm run build"
   },
   "exports": {
     ".": {
@@ -15,6 +16,9 @@
       "require": "./dist/index.cjs"
     }
   },
+  "files": [
+    "dist"
+  ],
   "peerDependencies": {
     "@colyseus/schema": "^4.0.8",
     "@colyseus/sdk": "^0.17.26",
