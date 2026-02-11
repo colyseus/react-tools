@@ -32,7 +32,10 @@ export class MyRoom extends Room<{ state: MyRoomState }> {
   private updateNumber = 0;
 
   update() {
-    this.state.myString = `Update #${this.updateNumber++}`;
+    // Only update myString every 5 updates to demonstrate that nested changes can still trigger state changes.
+    if (this.updateNumber++ % 5 === 0) {
+      this.state.myString = `Update #${this.updateNumber}`;
+    }
     
     this.state.players.forEach(player => {
       player.position.x += 10;
