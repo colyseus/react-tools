@@ -2,6 +2,18 @@
 import { Schema, ArraySchema, MapSchema } from "@colyseus/schema";
 
 /**
+ * Returns the `@type`-decorated field names for a Schema class,
+ * reading from `Symbol.metadata` set by v4's `@type()` decorators.
+ */
+function getSchemaFieldNames(node: object): string[] | undefined {
+    const metadata = (node.constructor as any)?.[Symbol.metadata];
+    if (metadata && typeof metadata === 'object') {
+        return Object.values(metadata as Record<string, { name: string }>).map(f => f.name);
+    }
+    return undefined;
+}
+
+/**
  * Remove function properties from a type.
  */
 type OmitFunctions<T> = Omit<T, {
