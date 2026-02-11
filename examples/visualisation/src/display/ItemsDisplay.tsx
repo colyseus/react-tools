@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { ArraySchema } from '@colyseus/schema';
-import { Snapshot } from '../../../src';
+import { Snapshot } from '../../../../src';
 import { Item } from '../schema/MyRoomState';
 import { ItemDisplay } from './ItemDisplay';
 import { useRenderHighlight } from './useRenderHighlight';
