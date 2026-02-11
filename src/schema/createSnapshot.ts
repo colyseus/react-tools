@@ -161,37 +161,21 @@ function createSnapshotForSchema(
     const snapshotted: Record<string, any> = {};
     let hasChanged = previousResult === undefined;
 
-    // Get Colyseus schema field definitions, if present.
-    const fieldDefinitions = (node as any)._definition?.fields;
+    // Get Colyseus schema field names via Symbol.metadata.
+    const fieldNames = getSchemaFieldNames(node);
 
-    if (fieldDefinitions) {
-        // Iterate only over @type decorated fields.
-        for (const fieldName in fieldDefinitions) {
-            const value = (node as any)[fieldName];
-            if (typeof value !== "function") {
-                const snapshottedValue = createSnapshot(value, ctx);
-                snapshotted[fieldName] = snapshottedValue;
+    if (!fieldNames) {
+        throw new Error(`createSnapshotForSchema: no field metadata found on ${node.constructor?.name ?? 'unknown'}. Is @colyseus/schema v4 installed?`);
+    }
 
-                if (!hasChanged && previousResult && previousResult[fieldName] !== snapshottedValue) {
-                    hasChanged = true;
-                }
-            }
-        }
-    } else {
-        // Fallback: iterate over enumerable properties, excluding internals.
-        for (const key in node) {
-            if (key.startsWith("_") || key.startsWith("$")) {
-                // Ignore "private" fields.
-                continue;
-            }
-            const value = (node as any)[key];
-            if (typeof value !== "function") {
-                const snapshottedValue = createSnapshot(value, ctx);
-                snapshotted[key] = snapshottedValue;
+    for (const fieldName of fieldNames) {
+        const value = (node as any)[fieldName];
+        if (typeof value !== "function") {
+            const snapshottedValue = createSnapshot(value, ctx);
+            snapshotted[fieldName] = snapshottedValue;
 
-                if (!hasChanged && previousResult && previousResult[key] !== snapshottedValue) {
-                    hasChanged = true;
-                }
+            if (!hasChanged && previousResult && previousResult[fieldName] !== snapshottedValue) {
+                hasChanged = true;
             }
         }
     }
