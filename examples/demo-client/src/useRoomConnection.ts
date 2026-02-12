@@ -9,7 +9,7 @@ export const useRoomConnection = () => {
       let joinedRoom: Room<MyRoomState> | null = null;
 
       const client = new Client('http://localhost:2567');
-      client.joinOrCreate<MyRoomState>("my_room")
+      client.joinOrCreate<MyRoomState>("my_room", undefined, MyRoomState)
         .then((room) => {
           joinedRoom = room;
           console.log("Joined room:", room.state);
