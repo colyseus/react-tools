@@ -78,9 +78,6 @@ export function useColyseusState<T extends Schema, U = T>(
         // Save the objectToRefId map for reuse.
         subscription.objectToRefId = ctx.objectToRefId;
 
-        // Clear dirty refs after snapshot is complete.
-        subscription.dirtyRefIds.clear();
-
         // Periodically prune stale cache entries (every 100 snapshots).
         if (++subscription.cleanupCounter >= 100 && ctx.refs) {
             subscription.cleanupCounter = 0;

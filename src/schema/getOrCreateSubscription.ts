@@ -65,6 +65,9 @@ export function getOrCreateSubscription(roomState: Schema, decoder: Decoder): St
     // returning. By wrapping decode, we run our notification logic after
     // the entire decode + triggerChanges + GC cycle completes.
     decoder.decode = function (this: Decoder, ...args: [Uint8Array, Iterator, IRef]) {
+        // Clear dirty refs after each decode.
+        subscription.dirtyRefIds.clear();
+
         const changes: DataChange[] = subscription.originalDecode.apply(decoder, args);
 
         if (changes && changes.length > 0) {
