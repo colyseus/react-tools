@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Schema, Decoder, DataChange } from "@colyseus/schema";
+import { Schema, Decoder, type DataChange, type IRef, type Iterator } from "@colyseus/schema";
 
 /**
  * Subscription state for a single room, shared across all hook instances
@@ -18,8 +18,8 @@ export interface StateSubscription {
     objectToRefId: Map<object, number> | undefined;
     /** Counter for periodic pruning of stale cache entries */
     cleanupCounter: number;
-    /** Original triggerChanges function from the decoder */
-    originalTrigger?: (changes: DataChange[]) => void;
+    /** Original decode function from the decoder */
+    originalDecode: (bytes: Uint8Array<ArrayBufferLike>, it?: Iterator, ref?: IRef) => DataChange<any, string>[];
 }
 
 /** WeakMap to store subscriptions per room state instance */
@@ -29,7 +29,14 @@ const subscriptionsByState = new WeakMap<Schema, StateSubscription>();
  * Gets or creates a subscription for the given room state.
  * 
  * This function sets up change notification by wrapping the decoder's
- * `triggerChanges` method to notify all subscribed React components.
+ * `decode` method to intercept all state changes and notify subscribed
+ * React components.
+ * 
+ * We wrap `decode()` rather than assigning `decoder.triggerChanges` because
+ * `triggerChanges` is a single-slot callback that gets unconditionally
+ * overwritten by `Callbacks.get()` / `getDecoderStateCallbacks()` on every
+ * call. Wrapping `decode()` sidesteps this conflict entirely since it is the
+ * sole entry point for both full-state syncs and incremental patches.
  * 
  * @param roomState - The Colyseus room state Schema instance
  * @param decoder - The Colyseus decoder associated with the room
@@ -49,43 +56,47 @@ export function getOrCreateSubscription(roomState: Schema, decoder: Decoder): St
         parentRefIdMap: new Map(),
         objectToRefId: undefined,
         cleanupCounter: 0,
+        originalDecode: decoder.decode,
     };
 
-    // Wrap the decoder's triggerChanges to notify React subscribers.
-    subscription.originalTrigger = decoder.triggerChanges?.bind(decoder);
+    // Wrap the decoder's decode method to intercept all state changes.
+    // decode() is the single entry point for both full state syncs and
+    // incremental patches, and it calls triggerChanges internally before
+    // returning. By wrapping decode, we run our notification logic after
+    // the entire decode + triggerChanges + GC cycle completes.
+    decoder.decode = function (this: Decoder, ...args: [Uint8Array, Iterator, IRef]) {
+        const changes: DataChange[] = subscription.originalDecode.apply(decoder, args);
 
-    decoder.triggerChanges = (changes: DataChange[]) => {
-        // Call the original trigger first (for Colyseus callbacks like onChange).
-        if (subscription.originalTrigger) {
-            subscription.originalTrigger(changes);
-        }
-
-        // Rebuild reverse lookup since refs may have changed.
-        const refs = decoder.root?.refs;
-        if (refs) {
-            subscription.objectToRefId = new Map();
-            for (const [refId, obj] of refs.entries()) {
-                if (obj !== null && typeof obj === "object") {
-                    subscription.objectToRefId.set(obj, refId);
+        if (changes && changes.length > 0) {
+            // Rebuild reverse lookup since refs may have changed.
+            const refs = decoder.root?.refs;
+            if (refs) {
+                subscription.objectToRefId = new Map();
+                for (const [refId, obj] of refs.entries()) {
+                    if (obj !== null && typeof obj === "object") {
+                        subscription.objectToRefId.set(obj, refId);
+                    }
                 }
             }
-        }
 
-        // Mark all changed refIds as dirty, walking up the parent chain.
-        for (const change of changes) {
-            const refId = subscription.objectToRefId?.get(change.ref) ?? -1;
-            if (refId !== -1) {
-                // Mark this ref and all its ancestors as dirty.
-                let currentRefId: number | undefined = refId;
-                while (currentRefId !== undefined) {
-                    subscription.dirtyRefIds.add(currentRefId);
-                    currentRefId = subscription.parentRefIdMap.get(currentRefId);
+            // Mark all changed refIds as dirty, walking up the parent chain.
+            for (const change of changes) {
+                const refId = subscription.objectToRefId?.get(change.ref) ?? -1;
+                if (refId !== -1) {
+                    // Mark this ref and all its ancestors as dirty.
+                    let currentRefId: number | undefined = refId;
+                    while (currentRefId !== undefined) {
+                        subscription.dirtyRefIds.add(currentRefId);
+                        currentRefId = subscription.parentRefIdMap.get(currentRefId);
+                    }
                 }
             }
+
+            // Notify all React subscribers that state has changed.
+            subscription.listeners.forEach((callback) => callback());
         }
 
-        // Notify all React subscribers that state has changed.
-        subscription.listeners.forEach((callback) => callback());
+        return changes;
     };
 
     subscriptionsByState.set(roomState, subscription);
