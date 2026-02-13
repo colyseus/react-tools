@@ -242,12 +242,15 @@ export function createSnapshot<T>(node: T, ctx: SnapshotContext): Snapshot<T> {
 
     let result: any;
 
-    if (node instanceof MapSchema) {
-        result = createSnapshotForMapSchema(node, previousResult, ctx);
-    } else if (node instanceof ArraySchema) {
-        result = createSnapshotForArraySchema(node, previousResult, ctx);
-    } else if (node instanceof Schema) {
+    if (typeof (node as any)['set'] === 'function') { // instanceof MapSchema
+        result = createSnapshotForMapSchema(node as unknown as MapSchema<any>, previousResult, ctx);
+
+    } else if (typeof (node as any)['push'] === 'function') { // instanceof ArraySchema
+        result = createSnapshotForArraySchema(node as unknown as ArraySchema<any>, previousResult, ctx);
+
+    } else if (Schema.isSchema(node)) {
         result = createSnapshotForSchema(node, previousResult, ctx);
+
     } else {
         // Plain object or unknown type - pass through.
         result = node;
