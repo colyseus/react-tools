@@ -30,10 +30,11 @@ import { useColyseusState } from './useColyseusState';
  * ```
  */
 export function useRoomState<T extends Schema, U = T>(
-    room: Room<{state: T}>,
+    room: Room<{state: T}> | null | undefined,
     selector: (state: T) => U = (s) => s as unknown as U
 ): Snapshot<U> | undefined {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const decoder = (room.serializer as any).decoder;
-    return useColyseusState(room.state as T, decoder, selector);
+    const decoder = (room?.serializer as any)?.decoder;
+
+    return useColyseusState(room?.state as T, decoder, selector);
 }

@@ -762,3 +762,27 @@ describe('subscribe stability', () => {
         expect(subscription.listeners.size).toBe(1);
     });
 });
+
+describe('falsy arguments', () => {
+    test('does not crash when state is undefined', () => {
+        const { result } = renderHook(() => useColyseusState(undefined, undefined));
+        expect(result.current).toBeUndefined();
+    });
+
+    test('does not crash when state is null-ish and decoder is undefined', () => {
+        const { result } = renderHook(() => useColyseusState(undefined, undefined));
+        expect(result.current).toBeUndefined();
+    });
+
+    test('does not crash when state is provided but decoder is undefined', () => {
+        const { clientState } = simulateState(() => new MyRoomState());
+        const { result } = renderHook(() => useColyseusState(clientState, undefined));
+        expect(result.current).toBeUndefined();
+    });
+
+    test('does not crash when decoder is provided but state is undefined', () => {
+        const { decoder } = simulateState(() => new MyRoomState());
+        const { result } = renderHook(() => useColyseusState(undefined, decoder));
+        expect(result.current).toBeUndefined();
+    });
+});
