@@ -32,7 +32,7 @@ import { getOrCreateSubscription } from './getOrCreateSubscription';
  */
 export function useColyseusState<T extends Schema, U = T>(
     roomState?: T,
-    decoder?: Decoder,
+    decoder?: Decoder<T>,
     selector: (state: T) => U = (s) => s as unknown as U
 ): Snapshot<U> {
     // Ensure subscription is set up (side effect for StrictMode compatibility).
