@@ -1,0 +1,8 @@
+.players {
+  border: 1px solid #ccc;
+  padding: 1em;
+  margin: 1em;
+  background-color: #242424;
+  corner-shape: squircle;
+  border-radius: 1em;
+}

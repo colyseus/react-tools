@@ -1,8 +1,8 @@
 import { MapSchema, Schema, type } from "@colyseus/schema"
 
 export class Position extends Schema {
-   @type('number') x = 0;
-   @type('number') y = 0;
+  @type('number') x = 0;
+  @type('number') y = 0;
 }
 
 export class Player extends Schema {

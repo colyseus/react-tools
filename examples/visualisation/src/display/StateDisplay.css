@@ -1,0 +1,10 @@
+.state {
+  border: 1px solid #ccc;
+  padding: 1em;
+  margin: 1em 0;
+  background-color: #242424;
+  width: 100%;
+  box-sizing: border-box;
+  corner-shape: squircle;
+  border-radius: 1em;
+}

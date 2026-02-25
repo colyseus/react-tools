@@ -1,0 +1,7 @@
+.position {
+  border: 1px solid #ccc;
+  padding: 0.25em 1em;
+  background-color: #242424;
+  corner-shape: squircle;
+  border-radius: 1em;
+}
