@@ -1,9 +1,10 @@
 import { useSyncExternalStore, useEffect, type ReactNode, type DependencyList } from "react";
 import { Schema } from "@colyseus/schema";
 import { Room } from "@colyseus/sdk";
-import { useRoom as useRoomLifecycle, type UseRoomResult } from "./useRoom";
-import { useRoomState as useRoomStateOriginal } from "./schema/useRoomState";
-import type { Snapshot } from "./schema/createSnapshot";
+import { useRoom as useRoomLifecycle, type UseRoomResult } from "../room/useRoom";
+import { useRoomState as useRoomStateOriginal } from "../schema/useRoomState";
+import { useRoomMessage as useRoomMessageStandalone } from "../room/useRoomMessage";
+import type { Snapshot } from "../schema/createSnapshot";
 
 interface RoomProviderProps<T, State> {
   connect: (() => Promise<Room<T, State>>) | null | undefined | false;
@@ -88,5 +89,17 @@ export function createRoomContext<T = any, State extends Schema = Schema>() {
     return useRoomStateOriginal(room, selector);
   }
 
-  return { RoomProvider, useRoom, useRoomState };
+  /**
+   * Subscribes to room messages without needing to pass the room.
+   * The room is resolved from the store automatically.
+   */
+  function useRoomMessage(
+    type: string | number | "*",
+    callback: (...args: any[]) => void
+  ): void {
+    const { room } = useSyncExternalStore(subscribe, getSnapshot);
+    useRoomMessageStandalone(room, type, callback);
+  }
+
+  return { RoomProvider, useRoom, useRoomState, useRoomMessage };
 }

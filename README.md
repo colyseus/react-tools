@@ -83,6 +83,108 @@ const players = useRoomState(room, (state) => state.players);
 
 Only components that read `players` will re-render when the players map changes.
 
+### `useRoomMessage(room, type, callback)`
+
+Subscribes to Colyseus room messages. The callback is kept in a ref so it is always up-to-date without re-subscribing. Automatically unsubscribes when the room changes or the component unmounts.
+
+```tsx
+import { useRoom, useRoomMessage } from "@colyseus/react";
+
+function Chat() {
+  const { room } = useRoom(() => client.joinOrCreate("game_room"));
+  const [messages, setMessages] = useState<string[]>([]);
+
+  useRoomMessage(room, "chat", (message) => {
+    setMessages((prev) => [...prev, message]);
+  });
+
+  return (
+    <ul>
+      {messages.map((msg, i) => <li key={i}>{msg}</li>)}
+    </ul>
+  );
+}
+```
+
+Pass `"*"` as the type to listen to all message types.
+
+### `useLobbyRoom(callback, deps?)`
+
+Connects to a Colyseus [Lobby Room](https://docs.colyseus.io/builtin-rooms/lobby/) and provides a live-updating list of available rooms. The list is automatically maintained as rooms are created, updated, and removed.
+
+```tsx
+import { Client } from "@colyseus/sdk";
+import { useLobbyRoom } from "@colyseus/react";
+
+const client = new Client("ws://localhost:2567");
+
+function Lobby() {
+  const { rooms, error, isConnecting } = useLobbyRoom(
+    () => client.joinOrCreate("lobby"),
+  );
+
+  if (isConnecting) return <p>Connecting...</p>;
+  if (error) return <p>Error: {error.message}</p>;
+
+  return (
+    <ul>
+      {rooms.map((room) => (
+        <li key={room.roomId}>
+          {room.name} — {room.clients}/{room.maxClients} players
+        </li>
+      ))}
+    </ul>
+  );
+}
+```
+
+**Return value:**
+
+| Field | Type | Description |
+|---|---|---|
+| `rooms` | `RoomAvailable<Metadata>[]` | Live list of available rooms |
+| `room` | `Room \| undefined` | The underlying lobby room connection |
+| `error` | `Error \| undefined` | Connection error, if any |
+| `isConnecting` | `boolean` | `true` while connecting to the lobby |
+
+### `useQueueRoom(connect, consume, deps?)`
+
+Manages the full lifecycle of a Colyseus matchmaking queue: connecting to the queue room, tracking group size, receiving a seat reservation, confirming, and consuming the seat to join the match room. Cleans up both rooms on unmount.
+
+```tsx
+import { Client } from "@colyseus/sdk";
+import { useQueueRoom } from "@colyseus/react";
+
+const client = new Client("ws://localhost:2567");
+
+function Matchmaking() {
+  const { room, clients, isWaiting, error } = useQueueRoom(
+    () => client.joinOrCreate("queue", { rank: 1200 }),
+    (reservation) => client.consumeSeatReservation(reservation),
+  );
+
+  if (error) return <p>Error: {error.message}</p>;
+  if (room) return <GameScreen room={room} />;
+  if (isWaiting) return <p>Waiting for match... {clients} players in group</p>;
+  return <p>Connecting...</p>;
+}
+```
+
+The first argument connects to the queue room. The second argument is called with the `SeatReservation` once a match is found — use `client.consumeSeatReservation()` to join the match room.
+
+**Return value:**
+
+| Field | Type | Description |
+|---|---|---|
+| `room` | `Room \| undefined` | The match room, once the seat has been consumed |
+| `queue` | `Room \| undefined` | The queue room while waiting (undefined after match is joined) |
+| `clients` | `number` | Number of clients in the current matchmaking group |
+| `seat` | `SeatReservation \| undefined` | The seat reservation, once received |
+| `error` | `Error \| undefined` | Connection or matchmaking error |
+| `isWaiting` | `boolean` | `true` while connected to the queue and waiting for a match |
+
+## Contexts
+
 ### `createRoomContext()`
 
 Creates a set of hooks and a `RoomProvider` component that share a single room connection across React reconciler boundaries (e.g. DOM + React Three Fiber). The room is stored in a closure-scoped external store rather than React Context, so the hooks work in any reconciler tree that imports them.
@@ -128,6 +230,62 @@ function UI() {
 ```
 
 The returned `useRoom()` and `useRoomState(selector?)` work identically to the standalone hooks but don't require you to pass the room as an argument.
+
+### `createLobbyContext()`
+
+Creates a `LobbyProvider` and `useLobby` hook for sharing lobby room data globally across your app — useful when you need room metadata available persistently alongside an active game room, not just on a lobby screen. Like `createRoomContext`, it uses a closure-scoped external store so the hook works across reconciler boundaries.
+
+```tsx
+import { Client } from "@colyseus/sdk";
+import { createLobbyContext, createRoomContext } from "@colyseus/react";
+
+const client = new Client("ws://localhost:2567");
+
+const { LobbyProvider, useLobby } = createLobbyContext<MyMetadata>();
+const { RoomProvider, useRoom, useRoomState } = createRoomContext();
+```
+
+**Wrap your app with `LobbyProvider` (can nest with `RoomProvider`):**
+
+```tsx
+function App() {
+  return (
+    <LobbyProvider connect={() => client.joinLobby()}>
+      <RoomProvider connect={() => client.joinOrCreate("game_room")}>
+        <UI />
+        <Canvas>
+          <GameScene />
+        </Canvas>
+      </RoomProvider>
+    </LobbyProvider>
+  );
+}
+```
+
+`LobbyProvider` accepts a `connect` callback (same as `useLobbyRoom`) and an optional `deps` array. The lobby connection persists independently of the game room.
+
+**Access lobby data from any component — even deep inside the game:**
+
+```tsx
+function RoomBrowser() {
+  const { rooms, error, isConnecting } = useLobby();
+
+  if (isConnecting) return <p>Loading rooms...</p>;
+  if (error) return <p>Error: {error.message}</p>;
+
+  return (
+    <ul>
+      {rooms.map((room) => (
+        <li key={room.roomId}>
+          {room.metadata.displayName} — {room.clients}/{room.maxClients}
+        </li>
+      ))}
+    </ul>
+  );
+}
+```
+
+The returned `useLobby()` hook provides the same fields as `useLobbyRoom` (`rooms`, `room`, `error`, `isConnecting`).
 
 ## Credits
 

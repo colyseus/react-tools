@@ -2,7 +2,7 @@ import 'reflect-metadata';
 import React from 'react';
 import { renderHook, act } from '@testing-library/react';
 import { describe, expect, test, vi, beforeEach, afterEach } from 'vitest';
-import { useRoom } from '../useRoom';
+import { useRoom } from '../room/useRoom';
 import { Room } from '@colyseus/sdk';
 
 function createMockRoom<T = any>(state?: T): Room<T> {

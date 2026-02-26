@@ -1,5 +1,11 @@
 export { useRoomState } from './schema/useRoomState';
-export { useRoom } from './useRoom';
-export { createRoomContext } from './createRoomContext';
-export type { UseRoomResult } from './useRoom';
+export { useRoom } from './room/useRoom';
+export { useRoomMessage } from './room/useRoomMessage';
+export { createRoomContext } from './context/createRoomContext';
+export { createLobbyContext } from './context/createLobbyContext';
+export { useLobbyRoom } from './room/useLobbyRoom';
+export { useQueueRoom } from './room/useQueueRoom';
+export type { UseRoomResult } from './room/useRoom';
+export type { UseLobbyRoomResult } from './room/useLobbyRoom';
+export type { UseQueueRoomResult } from './room/useQueueRoom';
 export type { Snapshot } from './schema/createSnapshot';
