@@ -1,4 +1,4 @@
-import { Schema } from "@colyseus/schema";
+import type { InferState } from "@colyseus/shared-types";
 import { Room, SchemaSerializer } from "@colyseus/sdk";
 import { Snapshot } from './createSnapshot';
 import { useColyseusState } from './useColyseusState';
@@ -29,8 +29,8 @@ import { useColyseusState } from './useColyseusState';
  * const players = useRoomState(room, (s) => s.players);
  * ```
  */
-export function useRoomState<State, U = State>(
-    room: Room<any, State> | null | undefined,
+export function useRoomState<T = any, State = InferState<T, never>, U = State>(
+    room: Room<T, State> | null | undefined,
     selector: (state: State) => U = (s) => s as unknown as U
 ): Snapshot<U> | undefined {
     const serializer = room?.serializer as SchemaSerializer<any> | undefined;
