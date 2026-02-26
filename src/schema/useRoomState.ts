@@ -29,11 +29,24 @@ import { useColyseusState } from './useColyseusState';
  * const players = useRoomState(room, (s) => s.players);
  * ```
  */
+
+export function useRoomState<T, U = any>(
+    selector: (state: InferState<T, never>) => U
+): Snapshot<U> | undefined;
+
 export function useRoomState<T = any, State = InferState<T, never>, U = State>(
     room: Room<T, State> | null | undefined,
-    selector: (state: State) => U = (s) => s as unknown as U
-): Snapshot<U> | undefined {
+    selector?: (state: State) => U
+): Snapshot<U> | undefined;
+
+export function useRoomState(
+    roomOrSelector?: Room | ((state: any) => any) | null,
+    selector?: (state: any) => any
+): any {
+    const room = typeof roomOrSelector === 'function' ? undefined : roomOrSelector;
+    const sel = typeof roomOrSelector === 'function' ? roomOrSelector : selector;
+
     const serializer = room?.serializer as SchemaSerializer<any> | undefined;
 
-    return useColyseusState(room?.state, serializer?.decoder, selector);
+    return useColyseusState(room?.state, serializer?.decoder, sel);
 }
