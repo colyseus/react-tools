@@ -29,11 +29,11 @@ import { useColyseusState } from './useColyseusState';
  * const players = useRoomState(room, (s) => s.players);
  * ```
  */
-export function useRoomState<State extends Schema, U = State>(
+export function useRoomState<State, U = State>(
     room: Room<any, State> | null | undefined,
     selector: (state: State) => U = (s) => s as unknown as U
 ): Snapshot<U> | undefined {
-    const serializer = room?.serializer as SchemaSerializer<State> | undefined;
+    const serializer = room?.serializer as SchemaSerializer<any> | undefined;
 
     return useColyseusState(room?.state, serializer?.decoder, selector);
 }
