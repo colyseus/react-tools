@@ -2,6 +2,8 @@
 
 React hooks for [Colyseus](https://colyseus.io/) multiplayer applications.
 
+![](image.webp)
+
 ## Installation
 
 ```bash
