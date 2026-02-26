@@ -1,3 +1,4 @@
+import type { InferState } from "@colyseus/shared-types";
 import { Room, type SeatReservation } from "@colyseus/sdk";
 import { useState, useRef, useEffect, type DependencyList } from "react";
 import { useRoom } from "./useRoom";
@@ -6,7 +7,7 @@ import { useRoomMessage } from "./useRoomMessage";
 /**
  * Return type of the useQueueRoom hook.
  */
-export interface UseQueueRoomResult<T = any, State = any> {
+export interface UseQueueRoomResult<T = any, State = InferState<T, never>> {
     /** The match room after the seat has been consumed, undefined otherwise. */
     room: Room<T, State> | undefined;
     /** The queue room while waiting. Undefined before connection and after match is joined. */
@@ -53,7 +54,7 @@ export interface UseQueueRoomResult<T = any, State = any> {
  * return <div>Connecting...</div>;
  * ```
  */
-export function useQueueRoom<T = any, State = any>(
+export function useQueueRoom<T = any, State = InferState<T, never>>(
     connect: (() => Promise<Room>) | null | undefined | false,
     consume: (reservation: SeatReservation) => Promise<Room<T, State>>,
     deps: DependencyList = []

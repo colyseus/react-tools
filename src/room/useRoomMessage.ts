@@ -1,8 +1,27 @@
+import type { ExtractRoomClientMessages, NormalizeRoomType } from "@colyseus/shared-types";
 import { Room } from "@colyseus/sdk";
 import { useEffect, useRef } from "react";
 
+export function useRoomMessage<T, MessageType extends keyof ExtractRoomClientMessages<NormalizeRoomType<T>>>(
+  room: Room<T> | null | undefined,
+  type: MessageType,
+  callback: (payload: ExtractRoomClientMessages<NormalizeRoomType<T>>[MessageType]) => void
+): void;
+
+export function useRoomMessage<T>(
+  room: Room<T> | null | undefined,
+  type: "*",
+  callback: (messageType: string | number, payload: any) => void
+): void;
+
+export function useRoomMessage<T, Payload = any>(
+  room: Room<T> | null | undefined,
+  type: [keyof ExtractRoomClientMessages<NormalizeRoomType<T>>] extends [never] ? (string | number) : never,
+  callback: (payload: Payload) => void
+): void;
+
 export function useRoomMessage(
-  room: Room<any, any> | null | undefined,
+  room: Room | null | undefined,
   type: string | number | "*",
   callback: (...args: any[]) => void
 ): void {

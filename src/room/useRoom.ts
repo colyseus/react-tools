@@ -1,3 +1,4 @@
+import type { InferState } from "@colyseus/shared-types";
 import { Room } from "@colyseus/sdk";
 import { useState, useRef, useEffect, type DependencyList } from "react";
 
@@ -67,7 +68,7 @@ function depsEqual(a: DependencyList | undefined, b: DependencyList | undefined)
  * const { room } = useRoom(isReady ? () => client.joinOrCreate("game") : null, [isReady]);
  * ```
  */
-export function useRoom<T = any, State = any>(
+export function useRoom<T = any, State = InferState<T, never>>(
     callback: (() => Promise<Room<T, State>>) | null | undefined | false,
     deps: DependencyList = []
 ): UseRoomResult<T, State> {
