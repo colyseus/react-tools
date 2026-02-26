@@ -292,3 +292,4 @@ The returned `useLobby()` hook provides the same fields as `useLobbyRoom` (`room
 ## Credits
 
 Inspiration and previous work by [@pedr0fontoura](https://github.com/pedr0fontoura) — [use-colyseus](https://github.com/pedr0fontoura/use-colyseus/).
+Rewrite and new `useRoomState()` made by [@FTWinston](https://github.com/FTWinston).
