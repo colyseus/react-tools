@@ -250,7 +250,7 @@ const { RoomProvider, useRoom, useRoomState } = createRoomContext();
 ```tsx
 function App() {
   return (
-    <LobbyProvider connect={() => client.joinLobby()}>
+    <LobbyProvider connect={() => client.joinOrCreate("lobby")}>
       <RoomProvider connect={() => client.joinOrCreate("game_room")}>
         <UI />
         <Canvas>
