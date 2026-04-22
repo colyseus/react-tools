@@ -57,12 +57,14 @@ export function useColyseusState<T extends Schema, U = T>(
         const subscription = getOrCreateSubscription(roomState, decoder);
         const selectedState = selectorRef.current(roomState);
 
-        // Create context for this snapshot pass.
+        // Reuse the persistent "visited" set; its contents from the previous
+        // pass are stale, so clear before the walk.
+        subscription.visitedThisPass.clear();
+
         const ctx: SnapshotContext = {
             refs: decoder.root?.refs,
-            objectToRefId: subscription.objectToRefId,
-            previousResultsByRefId: subscription.previousResultsByRefId,
-            currentResultsByRefId: new Map(),
+            resultsByRefId: subscription.resultsByRefId,
+            visitedThisPass: subscription.visitedThisPass,
             dirtyRefIds: subscription.dirtyRefIds,
             parentRefIdMap: subscription.parentRefIdMap,
             currentParentRefId: -1, // No parent for root
@@ -70,20 +72,13 @@ export function useColyseusState<T extends Schema, U = T>(
 
         const result = createSnapshot(selectedState, ctx);
 
-        // Update cached results for the next render.
-        for (const [refId, value] of ctx.currentResultsByRefId) {
-            subscription.previousResultsByRefId.set(refId, value);
-        }
-
-        // Save the objectToRefId map for reuse.
-        subscription.objectToRefId = ctx.objectToRefId;
-
         // Periodically prune stale cache entries (every 100 snapshots).
         if (++subscription.cleanupCounter >= 100 && ctx.refs) {
             subscription.cleanupCounter = 0;
-            for (const refId of subscription.previousResultsByRefId.keys()) {
-                if (!ctx.refs.has(refId)) {
-                    subscription.previousResultsByRefId.delete(refId);
+            const refs = ctx.refs;
+            for (const refId of subscription.resultsByRefId.keys()) {
+                if (!refs.has(refId)) {
+                    subscription.resultsByRefId.delete(refId);
                     subscription.parentRefIdMap.delete(refId);
                 }
             }

@@ -1,14 +1,27 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Schema, ArraySchema, MapSchema } from "@colyseus/schema";
 
+/** Property key used by @colyseus/schema to tag decoded instances with their refId. */
+const REF_ID_KEY = "~refId";
+
+/** Cache of field-name arrays, keyed by Schema constructor. */
+const fieldNamesByCtor = new WeakMap<Function, string[]>();
+
 /**
  * Returns the `@type`-decorated field names for a Schema class,
  * reading from `Symbol.metadata` set by v4's `@type()` decorators.
+ * Memoized per constructor.
  */
 function getSchemaFieldNames(node: object): string[] | undefined {
-    const metadata = (node.constructor as any)?.[Symbol.metadata];
-    if (metadata && typeof metadata === 'object') {
-        return Object.values(metadata as Record<string, { name: string }>).map(f => f.name);
+    const ctor = node.constructor as Function | undefined;
+    if (!ctor) return undefined;
+    const cached = fieldNamesByCtor.get(ctor);
+    if (cached) return cached;
+    const metadata = (ctor as any)?.[Symbol.metadata];
+    if (metadata && typeof metadata === "object") {
+        const names = Object.values(metadata as Record<string, { name: string }>).map(f => f.name);
+        fieldNamesByCtor.set(ctor, names);
+        return names;
     }
     return undefined;
 }
@@ -56,12 +69,10 @@ export type Snapshot<T> = DeepReadonly<
 export interface SnapshotContext {
     /** Map of refId → Schema object from decoder.root.refs */
     refs: Map<number, any> | undefined;
-    /** Reverse lookup: Schema object → refId (built lazily) */
-    objectToRefId: Map<object, number> | undefined;
-    /** Snapshot results from the previous render pass */
-    previousResultsByRefId: Map<number, any>;
-    /** Snapshot results from the current render pass (for cycle detection) */
-    currentResultsByRefId: Map<number, any>;
+    /** Cache of snapshot results per refId (persistent across passes) */
+    resultsByRefId: Map<number, any>;
+    /** refIds already visited in the current pass (for cycle detection) */
+    visitedThisPass: Set<number>;
     /** Set of refIds that have been modified since the last snapshot */
     dirtyRefIds: Set<number>;
     /** Map of childRefId → parentRefId for ancestor tracking */
@@ -71,38 +82,12 @@ export interface SnapshotContext {
 }
 
 /**
- * Builds a reverse lookup map from objects to their refIds.
+ * Returns the refId stored on a Schema/ArraySchema/MapSchema instance
+ * by the decoder, or -1 if absent.
  */
-function buildObjectToRefIdMap(refs: Map<number, any>): Map<object, number> {
-    const map = new Map<object, number>();
-    for (const [refId, obj] of refs.entries()) {
-        if (obj !== null && typeof obj === "object") {
-            map.set(obj, refId);
-        }
-    }
-    return map;
-}
-
-/**
- * Finds the refId for a Schema object using the reverse lookup map.
- * 
- * In Colyseus 3.x, each Schema instance is assigned a unique numeric refId
- * that remains stable across encode/decode cycles. This allows us to track
- * object identity even when the JavaScript object references change.
- * 
- * @param node - The Schema object to find the refId for
- * @param ctx - The snapshot context with the reverse lookup map
- * @returns The refId if found, or -1 if not found
- */
-function findRefId(node: object, ctx: SnapshotContext): number {
-    if (!ctx.refs) return -1;
-    
-    // Build the reverse lookup map lazily on first use.
-    if (!ctx.objectToRefId) {
-        ctx.objectToRefId = buildObjectToRefIdMap(ctx.refs);
-    }
-    
-    return ctx.objectToRefId.get(node) ?? -1;
+function getRefId(node: object): number {
+    const refId = (node as any)[REF_ID_KEY];
+    return typeof refId === "number" ? refId : -1;
 }
 
 /**
@@ -120,18 +105,16 @@ function createSnapshotForMapSchema(
         const snapshottedValue = createSnapshot(value, ctx);
         snapshotted[key] = snapshottedValue;
 
-        if (!hasChanged && previousResult) {
-            if (!(key in previousResult) || previousResult[key] !== snapshottedValue) {
-                hasChanged = true;
-            }
+        if (!hasChanged && previousResult && previousResult[key] !== snapshottedValue) {
+            hasChanged = true;
         }
     }
 
-    // Check if any keys were removed.
+    // Detect removed keys by comparing sizes (no array allocations).
     if (!hasChanged && previousResult) {
-        if (Object.keys(previousResult).length !== Object.keys(snapshotted).length) {
-            hasChanged = true;
-        }
+        let prevCount = 0;
+        for (const _key in previousResult) prevCount++;
+        if (prevCount !== node.size) hasChanged = true;
     }
 
     return hasChanged ? snapshotted : previousResult!;
@@ -212,27 +195,27 @@ export function createSnapshot<T>(node: T, ctx: SnapshotContext): Snapshot<T> {
         return node as Snapshot<T>;
     }
 
-    // Find the stable refId for this object.
-    const refId = findRefId(node, ctx);
+    // Read the stable refId directly off the instance (set by the decoder).
+    const refId = getRefId(node);
 
     // Record the parent relationship for ancestor tracking.
     if (refId !== -1 && ctx.currentParentRefId !== -1) {
         ctx.parentRefIdMap.set(refId, ctx.currentParentRefId);
     }
 
-    // Check if we've already snapshotted this object in the current pass (cycle detection).
-    if (refId !== -1 && ctx.currentResultsByRefId.has(refId)) {
-        return ctx.currentResultsByRefId.get(refId);
+    // Cycle / shared-reference short-circuit: already processed in this pass.
+    if (refId !== -1 && ctx.visitedThisPass.has(refId)) {
+        return ctx.resultsByRefId.get(refId);
     }
 
-    // Get the previous result for structural sharing comparison.
-    const previousResult = refId !== -1 ? ctx.previousResultsByRefId.get(refId) : undefined;
+    // Previous-pass result for structural sharing comparison.
+    const previousResult = refId !== -1 ? ctx.resultsByRefId.get(refId) : undefined;
 
     // If this node is not dirty and we have a previous result,
     // we can skip the entire subtree. With ancestor tracking, if any descendant
     // changed, this node would have been marked dirty too.
     if (refId !== -1 && previousResult !== undefined && !ctx.dirtyRefIds.has(refId)) {
-        ctx.currentResultsByRefId.set(refId, previousResult);
+        ctx.visitedThisPass.add(refId);
         return previousResult as Snapshot<T>;
     }
 
@@ -259,7 +242,8 @@ export function createSnapshot<T>(node: T, ctx: SnapshotContext): Snapshot<T> {
     // Restore parent and cache result.
     ctx.currentParentRefId = savedParentRefId;
     if (refId !== -1) {
-        ctx.currentResultsByRefId.set(refId, result);
+        ctx.resultsByRefId.set(refId, result);
+        ctx.visitedThisPass.add(refId);
     }
 
     return result as Snapshot<T>;
