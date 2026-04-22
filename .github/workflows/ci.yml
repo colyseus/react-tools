@@ -45,9 +45,25 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
 
+      - name: Extract changelog entry
+        id: changelog
+        if: github.ref == 'refs/heads/main' && steps.check.outputs.changed == 'true'
+        run: |
+          VERSION="${{ steps.check.outputs.version }}"
+          awk -v ver="$VERSION" '
+            $0 ~ "^## "ver"( |$)" { found=1; next }
+            found && /^## / { exit }
+            found { print }
+          ' CHANGELOG.md > release_notes.md
+          if [ ! -s release_notes.md ]; then
+            echo "No changelog entry found for version $VERSION" >&2
+            exit 1
+          fi
+
       - name: Release
         if: github.ref == 'refs/heads/main' && steps.check.outputs.changed == 'true'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.check.outputs.version }}
+          body_path: release_notes.md
           prerelease: false
