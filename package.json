@@ -7,7 +7,7 @@
     "build": "tsdown --format esm,cjs",
     "lint": "eslint .",
     "test": "vitest",
-    "prepublishOnly": "npm run build"
+    "prepare": "npm run build"
   },
   "exports": {
     ".": {
