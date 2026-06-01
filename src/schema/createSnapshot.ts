@@ -46,26 +46,24 @@ type DeepReadonly<T> = T extends (infer R)[]
  * Like ReadonlyArray<T>, but remove concat, so that ArraySchema
  * implements it.
  */
-export type MinimalReadonlyArray<T> = Omit<ReadonlyArray<T>, 'concat'>;
+export type IArray<T> = Omit<ReadonlyArray<T>, 'concat'>;
 
 /**
  * Like ReadonlyMap<K, V>, but uses IterableIterator instead of MapIterator,
  * so that MapSchema implements it.
  */
-export type MinimalReadonlyMap<K, V> = {
-    get(key: K): V | undefined;
-    has(key: K): boolean;
-    readonly size: number;
-    forEach(callbackfn: (value: V, key: K) => void, thisArg?: any): void;
-    entries(): IterableIterator<[K, V]>;
-    keys(): IterableIterator<K>;
-    values(): IterableIterator<V>;
+export type IMap<K, V> = Omit<ReadonlyMap<K, V>, typeof Symbol.iterator> & {
     [Symbol.iterator](): IterableIterator<[K, V]>;
 };
 
-// Helper to detect primitives
+/**
+ * A helper to detect primitives
+ */
 type Primitive = string | number | boolean | bigint | symbol | null | undefined;
 
+/**
+ * Anything that can be a Map key. (MapSchema keys are always strings.)
+ */
 type MapKey = string | number | symbol;
 
 /**
@@ -79,9 +77,9 @@ type MapKey = string | number | symbol;
  * @template T - The Colyseus Schema type to snapshot
  */
 export type Snapshot<T> = DeepReadonly<
-    T extends MinimalReadonlyArray<infer U>
+    T extends IArray<infer U>
     ? Snapshot<U>[]
-    : T extends MinimalReadonlyMap<infer K extends MapKey, infer U>
+    : T extends IMap<infer K extends MapKey, infer U>
     ? Record<K, Snapshot<U>>
     : T extends Primitive
     ? T
