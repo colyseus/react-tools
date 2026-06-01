@@ -8,4 +8,4 @@ export { useQueueRoom } from './room/useQueueRoom';
 export type { UseRoomResult } from './room/useRoom';
 export type { UseLobbyRoomResult } from './room/useLobbyRoom';
 export type { UseQueueRoomResult } from './room/useQueueRoom';
-export type { Snapshot } from './schema/createSnapshot';
+export type { MinimalReadonlyArray, MinimalReadonlyMap, Snapshot } from './schema/createSnapshot';
