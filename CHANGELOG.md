@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.16
+
+### Fixes
+
+- Nested `ArraySchema` values inside a `MapSchema` (e.g. `items.get(key).tags`) could stay stale — the live decoded state was correct, but the snapshot kept the old value. Dirty tracking cleared its set at the start of every decode, so when two or more decodes arrived with no snapshot in between — which happens whenever the hook is not subscribed while patches arrive (the component is unmounted on a route/tab switch, behind a conditional, virtualized out of a list, …) and then remounts — the second decode wiped the first's marks and the snapshot short-circuited the stale subtree. The dirty set now accumulates across decodes and is cleared only once a snapshot has consumed it. ([#10](https://github.com/colyseus/react-tools/issues/10), reported by [@konistehrad](https://github.com/konistehrad))
+
 ## 0.1.15
 
 ### Performance

@@ -12,8 +12,10 @@ export interface StateSubscription {
     resultsByRefId: Map<number, any>;
     /** Reusable "visited this pass" set for cycle detection */
     visitedThisPass: Set<number>;
-    /** Set of refIds that have been modified since the last snapshot */
+    /** Set of refIds that have been modified since the last consumed snapshot */
     dirtyRefIds: Set<number>;
+    /** Whether the current `dirtyRefIds` set has already been consumed by a snapshot */
+    dirtyConsumed: boolean;
     /** Map of childRefId → parentRefId for ancestor tracking */
     parentRefIdMap: Map<number, number>;
     /** Counter for periodic pruning of stale cache entries */
@@ -54,6 +56,7 @@ export function getOrCreateSubscription(roomState: Schema, decoder: Decoder): St
         resultsByRefId: new Map(),
         visitedThisPass: new Set(),
         dirtyRefIds: new Set(),
+        dirtyConsumed: true,
         parentRefIdMap: new Map(),
         cleanupCounter: 0,
         originalDecode: decoder.decode,
@@ -65,8 +68,14 @@ export function getOrCreateSubscription(roomState: Schema, decoder: Decoder): St
     // returning. By wrapping decode, we run our notification logic after
     // the entire decode + triggerChanges + GC cycle completes.
     decoder.decode = function (this: Decoder, ...args: [Uint8Array, Iterator, IRef]) {
-        // Clear dirty refs after each decode.
-        subscription.dirtyRefIds.clear();
+        // Several decodes can batch before React renders. Clearing per-decode
+        // would drop earlier marks whose refs aren't in `parentRefIdMap` yet, so
+        // we clear only once a snapshot has consumed the set — accumulating across
+        // the batch otherwise. (#10)
+        if (subscription.dirtyConsumed) {
+            subscription.dirtyRefIds.clear();
+            subscription.dirtyConsumed = false;
+        }
 
         const changes: DataChange[] = subscription.originalDecode.apply(decoder, args);
 
