@@ -12,13 +12,22 @@ export interface StateSubscription {
     resultsByRefId: Map<number, any>;
     /** Reusable "visited this pass" set for cycle detection */
     visitedThisPass: Set<number>;
-    /** Set of refIds that have been modified since the last consumed snapshot */
+    /**
+     * Cached refIds whose result is stale: the ref (or a descendant) changed
+     * since it was last rebuilt. Only refs that have a cached result are tracked
+     * — an uncached ref rebuilds on its own next pass, so `dirtyRefIds` stays a
+     * subset of `resultsByRefId` and is bounded/pruned by it. Decode adds; a
+     * snapshot removes a refId only when it actually rebuilds that ref (see
+     * `createSnapshot`). Because it is never bulk-cleared on a schedule, a mark
+     * survives across any number of decodes and unrelated re-renders until the
+     * ref is genuinely re-snapshotted — which is what keeps nested values fresh
+     * across decode/render interleavings, where clearing-per-decode used to wipe
+     * a not-yet-consumed mark and leave it stale. (#10)
+     */
     dirtyRefIds: Set<number>;
-    /** Whether the current `dirtyRefIds` set has already been consumed by a snapshot */
-    dirtyConsumed: boolean;
     /** Map of childRefId → parentRefId for ancestor tracking */
     parentRefIdMap: Map<number, number>;
-    /** Counter for periodic pruning of stale cache entries */
+    /** Counter for periodic pruning of stale cache entries (snapshot side) */
     cleanupCounter: number;
     /** Original decode function from the decoder */
     originalDecode: (bytes: Uint8Array<ArrayBufferLike>, it?: Iterator, ref?: IRef) => DataChange<any, string>[];
@@ -56,7 +65,6 @@ export function getOrCreateSubscription(roomState: Schema, decoder: Decoder): St
         resultsByRefId: new Map(),
         visitedThisPass: new Set(),
         dirtyRefIds: new Set(),
-        dirtyConsumed: true,
         parentRefIdMap: new Map(),
         cleanupCounter: 0,
         originalDecode: decoder.decode,
@@ -68,28 +76,25 @@ export function getOrCreateSubscription(roomState: Schema, decoder: Decoder): St
     // returning. By wrapping decode, we run our notification logic after
     // the entire decode + triggerChanges + GC cycle completes.
     decoder.decode = function (this: Decoder, ...args: [Uint8Array, Iterator, IRef]) {
-        // Several decodes can batch before React renders. Clearing per-decode
-        // would drop earlier marks whose refs aren't in `parentRefIdMap` yet, so
-        // we clear only once a snapshot has consumed the set — accumulating across
-        // the batch otherwise. (#10)
-        if (subscription.dirtyConsumed) {
-            subscription.dirtyRefIds.clear();
-            subscription.dirtyConsumed = false;
-        }
-
         const changes: DataChange[] = subscription.originalDecode.apply(decoder, args);
 
         if (changes && changes.length > 0) {
             const dirty = subscription.dirtyRefIds;
+            const cached = subscription.resultsByRefId;
             const parents = subscription.parentRefIdMap;
 
-            // Mark changed refIds dirty and walk up the parent chain.
-            // `change.refId` is provided directly by the decoder, so no
-            // reverse lookup map is needed.
+            // Walk each changed ref up its parent chain, marking the cached ones
+            // dirty so any selector at or above the change rebuilds. We only mark
+            // refs that have a cached result (an uncached ref rebuilds anyway), so
+            // `dirtyRefIds ⊆ resultsByRefId` and the snapshot-side prune bounds it.
+            // The `dirty.has` guard stops early — a cached ref already dirty has its
+            // cached ancestors dirty too. We add but never bulk-clear: a snapshot
+            // removes a ref only once it rebuilds it, so a mark can't be wiped
+            // before a late re-render consumes it. (#10)
             for (let i = 0; i < changes.length; i++) {
                 let currentRefId: number | undefined = changes[i].refId;
                 while (currentRefId !== undefined && !dirty.has(currentRefId)) {
-                    dirty.add(currentRefId);
+                    if (cached.has(currentRefId)) dirty.add(currentRefId);
                     currentRefId = parents.get(currentRefId);
                 }
             }

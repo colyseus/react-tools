@@ -73,7 +73,7 @@ export interface SnapshotContext {
     resultsByRefId: Map<number, any>;
     /** refIds already visited in the current pass (for cycle detection) */
     visitedThisPass: Set<number>;
-    /** Set of refIds that have been modified since the last snapshot */
+    /** refIds dirty since their cached result was last rebuilt; consumed here on rebuild */
     dirtyRefIds: Set<number>;
     /** Map of childRefId → parentRefId for ancestor tracking */
     parentRefIdMap: Map<number, number>;
@@ -211,9 +211,9 @@ export function createSnapshot<T>(node: T, ctx: SnapshotContext): Snapshot<T> {
     // Previous-pass result for structural sharing comparison.
     const previousResult = refId !== -1 ? ctx.resultsByRefId.get(refId) : undefined;
 
-    // If this node is not dirty and we have a previous result,
-    // we can skip the entire subtree. With ancestor tracking, if any descendant
-    // changed, this node would have been marked dirty too.
+    // If this ref isn't dirty and we have a previous result, the whole subtree is
+    // unchanged (a descendant change would have marked this ref dirty too via the
+    // ancestor walk in `getOrCreateSubscription`), so reuse it.
     if (refId !== -1 && previousResult !== undefined && !ctx.dirtyRefIds.has(refId)) {
         ctx.visitedThisPass.add(refId);
         return previousResult as Snapshot<T>;
@@ -239,10 +239,12 @@ export function createSnapshot<T>(node: T, ctx: SnapshotContext): Snapshot<T> {
         result = node;
     }
 
-    // Restore parent and cache result.
+    // Restore parent, cache the result, and consume the dirty mark: this ref now
+    // reflects the latest decode, so clear it rather than bulk-clearing per decode.
     ctx.currentParentRefId = savedParentRefId;
     if (refId !== -1) {
         ctx.resultsByRefId.set(refId, result);
+        ctx.dirtyRefIds.delete(refId);
         ctx.visitedThisPass.add(refId);
     }
 

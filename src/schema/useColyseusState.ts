@@ -72,10 +72,6 @@ export function useColyseusState<T extends Schema, U = T>(
 
         const result = createSnapshot(selectedState, ctx);
 
-        // Mark the dirty set consumed so the next decode starts a fresh batch
-        // instead of accumulating into this one. (see getOrCreateSubscription, #10)
-        subscription.dirtyConsumed = true;
-
         // Periodically prune stale cache entries (every 100 snapshots).
         if (++subscription.cleanupCounter >= 100 && ctx.refs) {
             subscription.cleanupCounter = 0;
@@ -83,6 +79,7 @@ export function useColyseusState<T extends Schema, U = T>(
             for (const refId of subscription.resultsByRefId.keys()) {
                 if (!refs.has(refId)) {
                     subscription.resultsByRefId.delete(refId);
+                    subscription.dirtyRefIds.delete(refId);
                     subscription.parentRefIdMap.delete(refId);
                 }
             }

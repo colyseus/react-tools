@@ -1,10 +1,11 @@
 {
   "name": "@colyseus/react",
-  "version": "0.1.16",
+  "version": "0.1.17",
   "type": "module",
   "scripts": {
     "dev": "tsdown --watch --format esm,cjs",
     "build": "tsdown --format esm,cjs",
+    "demo": "vite examples/nested-array-demo",
     "lint": "eslint .",
     "test": "vitest",
     "prepublishOnly": "npm run build"

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.17
+
+### Fixes
+
+- Nested `ArraySchema` values inside a `MapSchema` (e.g. `items.get(key).tags`) could still go stale during normal, mounted gameplay — not only across remounts as 0.1.16 addressed. 0.1.16 accumulated the dirty set until a snapshot consumed it, but with several hooks sharing one room subscription, an unrelated hook re-rendering between two decodes could let the next decode clear a mark another hook had not yet consumed, leaving that hook's nested value stale. The dirty set is no longer bulk-cleared on any schedule: a ref's mark is removed only when a snapshot actually rebuilds that ref, so it survives across any number of decodes and unrelated re-renders until the owning hook re-renders and consumes it. Marks are tracked only for refs that already have a cached result (`dirtyRefIds ⊆ resultsByRefId`), which keeps the set bounded by the cache with no extra bookkeeping. Re-render counts and snapshot performance are unchanged. ([#10](https://github.com/colyseus/react-tools/issues/10), follow-up repro by [@konistehrad](https://github.com/konistehrad))
+
 ## 0.1.16
 
 ### Fixes
