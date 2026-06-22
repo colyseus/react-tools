@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Schema, ArraySchema, MapSchema } from "@colyseus/schema";
-
 /** Property key used by @colyseus/schema to tag decoded instances with their refId. */
 const REF_ID_KEY = "~refId";
 
@@ -44,21 +43,47 @@ type DeepReadonly<T> = T extends (infer R)[]
     : T;
 
 /**
+ * Like ReadonlyArray<T>, but remove concat, so that ArraySchema
+ * implements it.
+ */
+export type IArray<T> = Omit<ReadonlyArray<T>, 'concat'>;
+
+/**
+ * Like ReadonlyMap<K, V>, but uses IterableIterator instead of MapIterator,
+ * so that MapSchema implements it.
+ */
+export type IMap<K, V> = Omit<ReadonlyMap<K, V>, typeof Symbol.iterator> & {
+    [Symbol.iterator](): IterableIterator<[K, V]>;
+};
+
+/**
+ * A helper to detect primitives
+ */
+type Primitive = string | number | boolean | bigint | symbol | null | undefined;
+
+/**
+ * Anything that can be a Map key. (MapSchema keys are always strings.)
+ */
+type MapKey = string | number | symbol;
+
+/**
  * Transforms a Colyseus Schema type into an immutable, plain JavaScript type.
  * 
- * - `ArraySchema<T>` becomes `readonly T[]`
- * - `MapSchema<T>` becomes `Readonly<Record<string, T>>`
- * - `Schema` subclasses become plain objects with only data properties
+ * - `ArraySchema<T>` (or `Array<T>`) becomes `readonly T[]`
+ * - `MapSchema<T>` (or `Map<K, T>`) becomes `Readonly<Record<string, T>>`
+ * - `Schema` (or `object`) subclasses become plain objects with only data properties
  * - Primitives remain unchanged
  * 
  * @template T - The Colyseus Schema type to snapshot
  */
 export type Snapshot<T> = DeepReadonly<
-    T extends ArraySchema<infer U>
+    T extends IArray<infer U>
     ? Snapshot<U>[]
-    : T extends MapSchema<infer U>
-    ? Record<string, Snapshot<U>>
-    : T extends Schema
+    : T extends IMap<infer K extends MapKey, infer U>
+    ? Record<K, Snapshot<U>>
+    : T extends Primitive
+    ? T
+    : T extends object
     ? { [K in keyof OmitFunctions<T>]: Snapshot<OmitFunctions<T>[K]> }
     : T
 >;
