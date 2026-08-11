@@ -129,6 +129,36 @@ export interface SnapshotContext {
 }
 
 /**
+ * Maps snapshot results back to the decoded schema instance they were built
+ * from. Populated by `createSnapshot`; read via `getSource`. Snapshot objects
+ * persist across renders (structural sharing), so the mapping stays valid for
+ * as long as the snapshot is reachable.
+ */
+const sourceBySnapshot = new WeakMap<object, object>();
+
+/**
+ * Returns the decoded schema instance a snapshot was created from, or
+ * `undefined` when the value isn't a snapshot produced by this package.
+ *
+ * The Predict APIs of `@colyseus/sdk` (e.g. `predict.value(instance, field)`)
+ * key off decoded schema instances, while `useRoomState` hands components
+ * plain snapshots. This bridges the two:
+ *
+ * ```tsx
+ * const player = useRoomState((s) => s.players.get(id));
+ * const source = getSource(player);       // the decoded Player instance
+ * useFrame(() => {
+ *   ref.current.position.x = predict.value(source, "x");
+ * });
+ * ```
+ */
+export function getSource<T = unknown>(snapshot: unknown): T | undefined {
+    return (snapshot !== null && typeof snapshot === "object")
+        ? sourceBySnapshot.get(snapshot) as T | undefined
+        : undefined;
+}
+
+/**
  * Returns the refId stored on a Schema/ArraySchema/MapSchema instance
  * by the decoder, or -1 if absent.
  */
@@ -293,6 +323,7 @@ export function createSnapshot<T>(node: T, ctx: SnapshotContext): Snapshot<T> {
         ctx.resultsByRefId.set(refId, result);
         ctx.dirtyRefIds.delete(refId);
         ctx.visitedThisPass.add(refId);
+        if (result !== node) sourceBySnapshot.set(result, node);
     }
 
     return result as Snapshot<T>;
