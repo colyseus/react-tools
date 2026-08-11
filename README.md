@@ -255,9 +255,9 @@ const source = getSchemaInstance(playerSnapshot);
 useFrame(() => { ref.current.position.x = predict.value(source, "x"); });
 ```
 
-### `useLatch()`
+### `useInputBuffer()`
 
-The ["latch, then consume"](https://docs.colyseus.io/netcode/recipes#taps-between-steps-latch-then-consume) input recipe as a hook: `latch()` in the React event handler, `consume()` inside the send loop so a tap lands on exactly one fixed step — never lost on a 0-step frame, never doubled on a multi-step frame.
+The ["buffer, then consume"](https://docs.colyseus.io/netcode/recipes#taps-between-steps-buffer-then-consume) input recipe as a hook: `press()` in the React event handler, `consume()` inside the send loop so a tap lands on exactly one fixed step — never lost on a 0-step frame, never doubled on a multi-step frame.
 
 For a complete working example (R3F + prediction + remote lerp), see [r3f-lobby-car-prototype](https://github.com/endel/r3f-lobby-car-prototype).
 

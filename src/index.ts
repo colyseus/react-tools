@@ -20,4 +20,4 @@ export { useAttachAll } from './predict/useAttachAll';
 export { useReconciler, type UseReconcilerOptions } from './predict/useReconciler';
 export { usePredictLoop, type PredictLoopOptions } from './predict/usePredictLoop';
 export { useEventChannel, type UseEventChannelOptions } from './predict/useEventChannel';
-export { useLatch, type Latch } from './predict/useLatch';
+export { useInputBuffer, type InputBuffer } from './predict/useInputBuffer';

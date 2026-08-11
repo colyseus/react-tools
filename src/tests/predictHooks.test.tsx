@@ -5,7 +5,7 @@ import { schema, t, Encoder, Decoder } from '@colyseus/schema';
 
 import { useColyseusState } from '../schema/useColyseusState';
 import { getSchemaInstance } from '../schema/createSnapshot';
-import { useLatch } from '../predict/useLatch';
+import { useInputBuffer } from '../predict/useInputBuffer';
 import { usePredict } from '../predict/usePredict';
 import { useEntityInstance } from '../predict/useEntityInstance';
 import { useSessionEntity } from '../predict/useSessionEntity';
@@ -77,20 +77,20 @@ const flushTimers = () => act(async () => { await new Promise((r) => setTimeout(
 
 // ---------------------------------------------------------------------------
 
-describe('useLatch', () => {
-    test('consume returns true at most once per latch', () => {
-        const { result, rerender } = renderHook(() => useLatch());
-        const latch = result.current;
+describe('useInputBuffer', () => {
+    test('consume returns true at most once per press', () => {
+        const { result, rerender } = renderHook(() => useInputBuffer());
+        const buffer = result.current;
 
-        expect(latch.consume()).toBe(false);
-        latch.latch();
-        expect(latch.peek()).toBe(true);
-        expect(latch.consume()).toBe(true);
-        expect(latch.consume()).toBe(false);
+        expect(buffer.consume()).toBe(false);
+        buffer.press();
+        expect(buffer.peek()).toBe(true);
+        expect(buffer.consume()).toBe(true);
+        expect(buffer.consume()).toBe(false);
 
         // stable identity across renders
         rerender();
-        expect(result.current).toBe(latch);
+        expect(result.current).toBe(buffer);
     });
 });
 

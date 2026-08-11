@@ -18,7 +18,7 @@ Targets Colyseus 0.18 / `@colyseus/schema` v5. From this release on, the package
   - `useAttachAll` — passive smoothing for a root-state collection (`predict.attachAll()`) as an effect, detached on unmount.
   - `useEventChannel` — optimistic events (`predict.defineEvent()`) with teardown plus reactivity: the calling component re-renders on predict/confirm/reject, so `has(key)`-style derives work in plain render code.
   - `useEntityInstance` / `useSessionEntity` — select decoded schema instances (what the Predict APIs key off), re-rendering only on identity change, never on field updates.
-  - `useLatch` — the latch-then-consume tap recipe.
+  - `useInputBuffer` — the buffer-then-consume tap recipe: `press()` in the event handler, `consume()` lands it on exactly one fixed step.
   - `getSchemaInstance(snapshot)` — bridges `useRoomState` snapshots back to their decoded instance for `predict.value()` reads (recorded during snapshot creation via a `WeakMap`, so lookups are free).
 
 ### Fixes
