@@ -9,7 +9,7 @@ export type { UseRoomResult } from './room/useRoom';
 export type { UseLobbyRoomResult } from './room/useLobbyRoom';
 export type { UseQueueRoomResult } from './room/useQueueRoom';
 export type { IArray, IMap, Snapshot } from './schema/createSnapshot';
-export { getSource } from './schema/createSnapshot';
+export { getSchemaInstance } from './schema/createSnapshot';
 
 // Predict hooks (@colyseus/sdk 0.18+ netcode)
 export { usePredict } from './predict/usePredict';

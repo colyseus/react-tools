@@ -130,7 +130,7 @@ export interface SnapshotContext {
 
 /**
  * Maps snapshot results back to the decoded schema instance they were built
- * from. Populated by `createSnapshot`; read via `getSource`. Snapshot objects
+ * from. Populated by `createSnapshot`; read via `getSchemaInstance`. Snapshot objects
  * persist across renders (structural sharing), so the mapping stays valid for
  * as long as the snapshot is reachable.
  */
@@ -146,13 +146,13 @@ const sourceBySnapshot = new WeakMap<object, object>();
  *
  * ```tsx
  * const player = useRoomState((s) => s.players.get(id));
- * const source = getSource(player);       // the decoded Player instance
+ * const source = getSchemaInstance(player);       // the decoded Player instance
  * useFrame(() => {
  *   ref.current.position.x = predict.value(source, "x");
  * });
  * ```
  */
-export function getSource<T = unknown>(snapshot: unknown): T | undefined {
+export function getSchemaInstance<T = unknown>(snapshot: unknown): T | undefined {
     return (snapshot !== null && typeof snapshot === "object")
         ? sourceBySnapshot.get(snapshot) as T | undefined
         : undefined;

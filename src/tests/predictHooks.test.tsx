@@ -4,7 +4,7 @@ import { describe, expect, test, vi } from 'vitest';
 import { schema, t, Encoder, Decoder } from '@colyseus/schema';
 
 import { useColyseusState } from '../schema/useColyseusState';
-import { getSource } from '../schema/createSnapshot';
+import { getSchemaInstance } from '../schema/createSnapshot';
 import { useLatch } from '../predict/useLatch';
 import { usePredict } from '../predict/usePredict';
 import { useEntityInstance } from '../predict/useEntityInstance';
@@ -94,7 +94,7 @@ describe('useLatch', () => {
     });
 });
 
-describe('getSource', () => {
+describe('getSchemaInstance', () => {
     test('maps snapshots back to decoded instances', () => {
         const { clientState, room, patch } = makeHarness();
         const decoder = room.serializer.decoder;
@@ -105,11 +105,11 @@ describe('getSource', () => {
 
         const { result } = renderHook(() => useColyseusState(clientState, decoder));
 
-        expect(getSource(result.current)).toBe(clientState);
-        expect(getSource(result.current.players)).toBe(clientState.players);
-        expect(getSource((result.current.players as any)['p1'])).toBe(clientState.players.get('p1'));
-        expect(getSource((result.current.players as any)['p1'].name)).toBeUndefined();
-        expect(getSource(undefined)).toBeUndefined();
+        expect(getSchemaInstance(result.current)).toBe(clientState);
+        expect(getSchemaInstance(result.current.players)).toBe(clientState.players);
+        expect(getSchemaInstance((result.current.players as any)['p1'])).toBe(clientState.players.get('p1'));
+        expect(getSchemaInstance((result.current.players as any)['p1'].name)).toBeUndefined();
+        expect(getSchemaInstance(undefined)).toBeUndefined();
     });
 });
 

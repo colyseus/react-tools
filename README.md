@@ -246,12 +246,12 @@ const hidden = !item.alive || pickups?.has(id);
 
 Select a **decoded schema instance** (what the Predict APIs key off), re-rendering only when its identity changes — never on field updates. `useSessionEntity` is the common case: your own entity by `sessionId`.
 
-### `getSource(snapshot)`
+### `getSchemaInstance(snapshot)`
 
 Bridges `useRoomState` snapshots back to their decoded instance, for `predict.value()` reads on entities you render from snapshot lists:
 
 ```tsx
-const source = getSource(playerSnapshot);
+const source = getSchemaInstance(playerSnapshot);
 useFrame(() => { ref.current.position.x = predict.value(source, "x"); });
 ```
 
