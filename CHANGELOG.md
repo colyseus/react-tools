@@ -27,7 +27,8 @@ Targets Colyseus 0.18 / `@colyseus/schema` v5. From this release on, the package
   - `refId` is read via v5's `Symbol.for("$refId")` tag, with the v4 `~refId` string key kept as a fallback.
   - Field-name derivation tolerates v5's mixed `Metadata` shape (index→field objects plus name→index reverse entries).
   - A no-op `decoder.triggerChanges` is seeded — v5 only collects and returns `DataChange[]` when a subscriber exists, and the subscription wrapper relies on the returned changes.
-- `Snapshot<T>` strips the Schema base internals that v5 declares publicly (`isTrackingPaused`, the symbol-keyed `$refId`/`$values`), and accepts plain `Array`/`Map`-shaped interfaces — the newly exported `IArray` / `IMap` types — so frontends can type component props without importing `@colyseus/schema`. Covered by compile-time assertions in `snapshotType.test.ts`.
+- `Snapshot<T>` strips the Schema base internals that v5 declares publicly (`isTrackingPaused`, the symbol-keyed `$refId`/`$values`), and accepts plain `Array`/`Map`-shaped interfaces — the newly exported `IArray` / `IMap` types — so frontends can type component props without importing `@colyseus/schema`. Covered by compile-time assertions in `snapshotType.test.ts`. ([#9](https://github.com/colyseus/react-tools/pull/9) by [@FTWinston](https://github.com/FTWinston))
+- The `prepare` script (replacing `prepublishOnly`) builds `dist/` on install, so git revisions work directly: `npm install colyseus/react-tools#0.18`. ([#9](https://github.com/colyseus/react-tools/pull/9) by [@FTWinston](https://github.com/FTWinston))
 
 ### Tests
 
