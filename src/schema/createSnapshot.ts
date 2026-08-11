@@ -1,16 +1,20 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { Schema, ArraySchema, MapSchema } from "@colyseus/schema";
 
-/** Property key used by @colyseus/schema to tag decoded instances with their refId. */
+/** Symbol used by @colyseus/schema v5 to tag decoded instances with their refId. */
+const REF_ID_SYMBOL: unique symbol = Symbol.for("$refId") as never;
+
+/** Property key used by @colyseus/schema v4 to tag decoded instances with their refId. */
 const REF_ID_KEY = "~refId";
 
 /** Cache of field-name arrays, keyed by Schema constructor. */
 const fieldNamesByCtor = new WeakMap<Function, string[]>();
 
 /**
- * Returns the `@type`-decorated field names for a Schema class,
- * reading from `Symbol.metadata` set by v4's `@type()` decorators.
- * Memoized per constructor.
+ * Returns the declared field names for a Schema class, reading from
+ * `Symbol.metadata` set by `@type()` decorators / the `schema()` builder.
+ * Handles both v4 and v5 metadata shapes (v5 mixes `index → field` entries
+ * with `fieldName → index` reverse-lookup entries). Memoized per constructor.
  */
 function getSchemaFieldNames(node: object): string[] | undefined {
     const ctor = node.constructor as Function | undefined;
@@ -19,7 +23,13 @@ function getSchemaFieldNames(node: object): string[] | undefined {
     if (cached) return cached;
     const metadata = (ctor as any)?.[Symbol.metadata];
     if (metadata && typeof metadata === "object") {
-        const names = Object.values(metadata as Record<string, { name: string }>).map(f => f.name);
+        const names: string[] = [];
+        for (const entry of Object.values(metadata as Record<string, unknown>)) {
+            // keep field descriptors; skip v5's fieldName → index reverse entries
+            if (entry && typeof entry === "object" && typeof (entry as { name?: unknown }).name === "string") {
+                names.push((entry as { name: string }).name);
+            }
+        }
         fieldNamesByCtor.set(ctor, names);
         return names;
     }
@@ -44,22 +54,59 @@ type DeepReadonly<T> = T extends (infer R)[]
     : T;
 
 /**
+ * Structural shape of a readonly array, minus `concat` — whose `ArraySchema`
+ * override (`ArraySchema<V>` return) is incompatible with `ReadonlyArray`.
+ * Lets `Snapshot` accept a plain `Array`/`ReadonlyArray` interface, not only
+ * `ArraySchema`, so frontends can type props against shared interfaces.
+ */
+export type IArray<T> = Omit<ReadonlyArray<T>, 'concat'>;
+
+/**
+ * Structural shape of a readonly map, using `IterableIterator` (as `MapSchema`
+ * does) rather than the lib's `MapIterator`. Lets `Snapshot` accept a plain
+ * `Map`/`ReadonlyMap` interface, not only `MapSchema`.
+ */
+export type IMap<K, V> = Omit<ReadonlyMap<K, V>, typeof Symbol.iterator> & {
+    [Symbol.iterator](): IterableIterator<[K, V]>;
+};
+
+/** Primitive (non-object) types, passed through a snapshot unchanged. */
+type Primitive = string | number | boolean | bigint | symbol | null | undefined;
+
+/** Anything usable as a Map key. (MapSchema keys are always strings.) */
+type MapKey = string | number | symbol;
+
+/**
  * Transforms a Colyseus Schema type into an immutable, plain JavaScript type.
- * 
- * - `ArraySchema<T>` becomes `readonly T[]`
- * - `MapSchema<T>` becomes `Readonly<Record<string, T>>`
- * - `Schema` subclasses become plain objects with only data properties
+ *
+ * - `ArraySchema<T>` (or `Array<T>` / `ReadonlyArray<T>`) becomes `readonly T[]`
+ * - `MapSchema<T>` (or `Map<K, T>` / `ReadonlyMap<K, T>`) becomes `Readonly<Record<K, T>>`
+ * - `Schema` subclasses (and plain objects) become plain objects with only data properties
  * - Primitives remain unchanged
- * 
- * @template T - The Colyseus Schema type to snapshot
+ *
+ * Colyseus's concrete `ArraySchema`/`MapSchema` are matched first for precise
+ * element inference; `ArraySchema`'s overridden member signatures don't infer
+ * cleanly through `IArray`, so the structural branches only catch plain types.
+ * The internal `~refId` tag added to decoded instances is dropped — the runtime
+ * snapshot only copies `@type`-decorated fields, never `~refId`.
+ *
+ * @template T - The Colyseus Schema (or equivalent plain) type to snapshot
  */
 export type Snapshot<T> = DeepReadonly<
     T extends ArraySchema<infer U>
     ? Snapshot<U>[]
     : T extends MapSchema<infer U>
     ? Record<string, Snapshot<U>>
-    : T extends Schema
-    ? { [K in keyof OmitFunctions<T>]: Snapshot<OmitFunctions<T>[K]> }
+    : T extends IArray<infer U>
+    ? Snapshot<U>[]
+    : T extends IMap<infer K extends MapKey, infer U>
+    ? Record<K, Snapshot<U>>
+    : T extends Primitive
+    ? T
+    : T extends object
+    // strip Schema-base internals: v4's `~refId` tag, v5's symbol-keyed
+    // members ($refId, $values) and `isTrackingPaused`
+    ? { [K in keyof OmitFunctions<T> as Exclude<K, "~refId" | "isTrackingPaused" | symbol>]: Snapshot<OmitFunctions<T>[K]> }
     : T
 >;
 
@@ -86,7 +133,7 @@ export interface SnapshotContext {
  * by the decoder, or -1 if absent.
  */
 function getRefId(node: object): number {
-    const refId = (node as any)[REF_ID_KEY];
+    const refId = (node as any)[REF_ID_SYMBOL] ?? (node as any)[REF_ID_KEY];
     return typeof refId === "number" ? refId : -1;
 }
 
@@ -160,7 +207,7 @@ function createSnapshotForSchema(
     const fieldNames = getSchemaFieldNames(node);
 
     if (!fieldNames) {
-        throw new Error(`createSnapshotForSchema: no field metadata found on ${node.constructor?.name ?? 'unknown'}. Is @colyseus/schema v4 installed?`);
+        throw new Error(`createSnapshotForSchema: no field metadata found on ${node.constructor?.name ?? 'unknown'}. Is @colyseus/schema v4+ installed?`);
     }
 
     for (const fieldName of fieldNames) {
