@@ -3,6 +3,9 @@ import { type Room, SchemaSerializer } from "@colyseus/sdk";
 import { useCallback, useRef, useSyncExternalStore } from "react";
 import { getOrCreateSubscription } from "../schema/getOrCreateSubscription";
 
+// Decoded instances only exist client-side; SSR renders as if unavailable.
+const getServerSnapshot = () => undefined;
+
 /**
  * React hook that selects a **decoded schema instance** from room state and
  * re-renders only when the selected identity changes (appears, is replaced,
@@ -47,5 +50,5 @@ export function useEntityInstance<T = any, State = InferState<T, never>, S = unk
         return (room && state) ? selectRef.current(state, room) : undefined;
     }, [room, state]);
 
-    return useSyncExternalStore(subscribe, getSnapshot);
+    return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot) as S | undefined;
 }

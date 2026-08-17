@@ -63,7 +63,12 @@ export function createRoomContext<T = any, State = InferState<T, never>>(
   contextOptions: CreateRoomContextOptions = {},
 ) {
   // Closure-scoped external store — bridges reconciler boundaries.
-  let snapshot: UseRoomResult<T, State> = { room: undefined, error: undefined, isConnecting: true };
+  const initialSnapshot: UseRoomResult<T, State> = {
+    room: undefined,
+    error: undefined,
+    isConnecting: true,
+  };
+  let snapshot = initialSnapshot;
   const listeners = new Set<() => void>();
 
   function subscribe(listener: () => void) {
@@ -73,6 +78,10 @@ export function createRoomContext<T = any, State = InferState<T, never>>(
 
   function getSnapshot(): UseRoomResult<T, State> {
     return snapshot;
+  }
+
+  function getServerSnapshot(): UseRoomResult<T, State> {
+    return initialSnapshot;
   }
 
   function setSnapshot(next: UseRoomResult<T, State>) {
@@ -99,7 +108,7 @@ export function createRoomContext<T = any, State = InferState<T, never>>(
    * Works in DOM tree, R3F tree, or any other reconciler tree.
    */
   function useRoom(): UseRoomResult<T, State> {
-    return useSyncExternalStore(subscribe, getSnapshot);
+    return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   }
 
   /**
@@ -109,7 +118,7 @@ export function createRoomContext<T = any, State = InferState<T, never>>(
   function useRoomState<U = State>(
     selector?: (state: State) => U
   ): Snapshot<U> | undefined {
-    const { room } = useSyncExternalStore(subscribe, getSnapshot);
+    const { room } = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
     return useRoomStateOriginal(room, selector);
   }
 
@@ -133,13 +142,13 @@ export function createRoomContext<T = any, State = InferState<T, never>>(
     type: string | number | "*",
     callback: (...args: any[]) => void
   ): void {
-    const { room } = useSyncExternalStore(subscribe, getSnapshot);
+    const { room } = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
     useRoomMessageStandalone(room as any, type as any, callback);
   }
 
   /** The room resolved from the store (undefined while connecting). */
   function useStoreRoom(): Room<T, State> | undefined {
-    return useSyncExternalStore(subscribe, getSnapshot).room;
+    return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot).room;
   }
 
   /**

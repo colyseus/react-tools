@@ -12,6 +12,8 @@ import { useSessionEntity } from '../predict/useSessionEntity';
 import { useReconciler } from '../predict/useReconciler';
 import { usePredictLoop } from '../predict/usePredictLoop';
 import { useEventChannel } from '../predict/useEventChannel';
+import { createRoomContext } from '../context/createRoomContext';
+import { renderToString } from 'react-dom/server';
 
 // ---------------------------------------------------------------------------
 // Harness: encoder/decoder pair + a room-like object. `Callbacks.get` (and
@@ -308,5 +310,40 @@ describe('useEventChannel', () => {
         await flushTimers();
         // disposed channels report no pending entries and ignore predicts
         expect(channel.pendingCount).toBe(0);
+    });
+});
+
+describe('server rendering', () => {
+    // Every predict hook from a context reads the room through useStoreRoom(),
+    // so one probe per store covers the whole family.
+    test('context predict hooks render on the server', () => {
+        const ctx = createRoomContext<any, any>();
+
+        function Probe() {
+            const predict = ctx.usePredict();
+            return <span>{predict === undefined ? 'no-predict' : 'has-predict'}</span>;
+        }
+
+        expect(renderToString(<Probe />)).toContain('no-predict');
+    });
+
+    test('useEntityInstance renders on the server even with a live room', () => {
+        const { room } = makeHarness();
+
+        function Probe() {
+            const me = useEntityInstance(room, (s, r) => s.players.get(r.sessionId));
+            return <span>{me === undefined ? 'no-entity' : 'has-entity'}</span>;
+        }
+
+        expect(renderToString(<Probe />)).toContain('no-entity');
+    });
+
+    test('useEventChannel renders on the server', () => {
+        function Probe() {
+            const channel = useEventChannel<string>(undefined, {});
+            return <span>{channel === undefined ? 'no-channel' : 'has-channel'}</span>;
+        }
+
+        expect(renderToString(<Probe />)).toContain('no-channel');
     });
 });

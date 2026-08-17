@@ -81,7 +81,7 @@ export function useEventChannel<T = any, RoomT = any, State = InferState<RoomT, 
         listenersRef.current.add(callback);
         return () => listenersRef.current.delete(callback);
     }, []);
-    useSyncExternalStore(subscribe, () => versionRef.current);
+    useSyncExternalStore(subscribe, () => versionRef.current, () => 0);
 
     return channel;
 }

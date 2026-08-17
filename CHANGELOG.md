@@ -29,11 +29,17 @@ Targets Colyseus 0.18 / `@colyseus/schema` v5. From this release on, the package
   - A no-op `decoder.triggerChanges` is seeded — v5 only collects and returns `DataChange[]` when a subscriber exists, and the subscription wrapper relies on the returned changes.
 - `Snapshot<T>` strips the Schema base internals that v5 declares publicly (`isTrackingPaused`, the symbol-keyed `$refId`/`$values`), and accepts plain `Array`/`Map`-shaped interfaces — the newly exported `IArray` / `IMap` types — so frontends can type component props without importing `@colyseus/schema`. Covered by compile-time assertions in `snapshotType.test.ts`. ([#9](https://github.com/colyseus/react-tools/pull/9) by [@FTWinston](https://github.com/FTWinston))
 - The `prepare` script (replacing `prepublishOnly`) builds `dist/` on install, so git revisions work directly: `npm install colyseus/react-tools#0.18`. ([#9](https://github.com/colyseus/react-tools/pull/9) by [@FTWinston](https://github.com/FTWinston))
+- Server-rendering a component that reads room state no longer crashes with `Missing getServerSnapshot, which is required for server-rendered content`. Every hook that reads a room — `useRoomState`, `useColyseusState`, the `createRoomContext` / `createLobbyContext` hooks, and the predict hooks — now renders on the server as if no room were connected, and picks up the live room right after hydration. ([#12](https://github.com/colyseus/react-tools/pull/12) by [@under-undefined](https://github.com/under-undefined))
 
 ### Tests
 
 - Test harnesses now call `discardChanges()` after each `encode()`, matching what colyseus core does — without it, schema v5 re-emits stale ops against a frozen index space and corrupts sequential array-splice patches (this had 4 array tests failing).
 - New `predictHooks.test.tsx` suite covering the Predict hooks (lifecycle, ref-counting, StrictMode, event-channel reactivity, entity selection).
+## 0.1.18
+
+### Fixes
+
+- Server-rendering a component that reads room state no longer crashes with `Missing getServerSnapshot, which is required for server-rendered content`. `useRoomState`, `useColyseusState` and the `createRoomContext` / `createLobbyContext` hooks now render on the server as if no room were connected — rooms and decoder state are client-side objects, never serialized for hydration — and pick up the live room right after hydration. ([#12](https://github.com/colyseus/react-tools/pull/12) by [@under-undefined](https://github.com/under-undefined))
 
 ## 0.1.17
 
