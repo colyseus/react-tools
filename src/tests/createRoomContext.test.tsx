@@ -6,6 +6,8 @@ import { Room } from '@colyseus/sdk';
 import { createRoomContext } from '../context/createRoomContext';
 import { simulateState } from './schema/simulateState';
 import { MyRoomState, Player } from './schema/MyRoomState';
+import { renderToString } from 'react-dom/server';
+import { useRoomState as useRoomStateStandalone } from '../schema/useRoomState';
 
 type Handler = (...args: any[]) => void;
 
@@ -35,6 +37,36 @@ function fakeRoom(state: MyRoomState, decoder: any) {
 }
 
 describe('createRoomContext', () => {
+    test('standalone room state uses an empty server snapshot', () => {
+        const sim = simulateState(() => new MyRoomState());
+        const { room } = fakeRoom(sim.clientState, sim.decoder);
+
+        function Probe() {
+            const state = useRoomStateStandalone(room);
+            return <span>{state === undefined ? 'no-state' : 'has-state'}</span>;
+        }
+
+        expect(renderToString(<Probe />)).toContain('no-state');
+    });
+
+    test('context hooks use their initial snapshot during server rendering', async () => {
+        const sim = simulateState(() => new MyRoomState());
+        const { room } = fakeRoom(sim.clientState, sim.decoder);
+        const { RoomProvider, useRoom, useRoomState } = createRoomContext<any, MyRoomState>();
+
+        await act(async () => {
+            render(<RoomProvider connect={() => Promise.resolve(room)}><div /></RoomProvider>);
+        });
+
+        function Probe() {
+            const { room: serverRoom, isConnecting } = useRoom();
+            const state = useRoomState();
+            return <span>{isConnecting && serverRoom === undefined && state === undefined ? 'initial' : 'live'}</span>;
+        }
+
+        expect(renderToString(<Probe />)).toContain('initial');
+    });
+
     test('useRoom / useRoomState / useRoomMessage bridge a single room', async () => {
         const sim = simulateState(() => new MyRoomState());
         sim.updateState((s) => { s.players.set("p1", new Player().assign({ name: "P1" })); });

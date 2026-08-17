@@ -3,6 +3,8 @@ import { renderHook } from '@testing-library/react';
 import { describe, expect, test } from 'vitest'
 import { useRoomState } from '../schema/useRoomState';
 import { Schema, type } from '@colyseus/schema';
+import React from 'react';
+import { renderToString } from 'react-dom/server';
 
 describe('falsy room argument', () => {
     test('types', () => {
@@ -34,5 +36,16 @@ describe('falsy room argument', () => {
     test('does not crash when room is undefined with a selector', () => {
         const { result } = renderHook(() => useRoomState(undefined, (s) => s));
         expect(result.current).toBeUndefined();
+    });
+});
+
+describe('server rendering', () => {
+    test('renders without falling back to client rendering', () => {
+        function Probe() {
+            const state = useRoomState(undefined);
+            return React.createElement('span', null, state === undefined ? 'no-state' : 'has-state');
+        }
+
+        expect(renderToString(React.createElement(Probe))).toContain('no-state');
     });
 });

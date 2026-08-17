@@ -37,12 +37,13 @@ interface LobbyProviderProps {
  * ```
  */
 export function createLobbyContext<Metadata = any>() {
-  let snapshot: UseLobbyRoomResult<Metadata> = {
+  const initialSnapshot: UseLobbyRoomResult<Metadata> = {
     rooms: [],
     room: undefined,
     error: undefined,
     isConnecting: true,
   };
+  let snapshot = initialSnapshot;
   const listeners = new Set<() => void>();
 
   function subscribe(listener: () => void) {
@@ -52,6 +53,10 @@ export function createLobbyContext<Metadata = any>() {
 
   function getSnapshot(): UseLobbyRoomResult<Metadata> {
     return snapshot;
+  }
+
+  function getServerSnapshot(): UseLobbyRoomResult<Metadata> {
+    return initialSnapshot;
   }
 
   function setSnapshot(next: UseLobbyRoomResult<Metadata>) {
@@ -79,7 +84,7 @@ export function createLobbyContext<Metadata = any>() {
    * Works in DOM tree, R3F tree, or any other reconciler tree.
    */
   function useLobby(): UseLobbyRoomResult<Metadata> {
-    return useSyncExternalStore(subscribe, getSnapshot);
+    return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   }
 
   return { LobbyProvider, useLobby };

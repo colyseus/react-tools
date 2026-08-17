@@ -3,6 +3,10 @@ import { useCallback, useRef, useSyncExternalStore, useEffect } from "react";
 import { createSnapshot, Snapshot, SnapshotContext } from './createSnapshot';
 import { getOrCreateSubscription } from './getOrCreateSubscription';
 
+// Room objects are not serialized from the server for hydration. Returning a
+// stable empty value keeps the server and hydration snapshots identical.
+const getServerSnapshot = () => undefined;
+
 /**
  * React hook that provides immutable snapshots of Colyseus room state
  * with structural sharing to minimize re-renders.
@@ -100,5 +104,5 @@ export function useColyseusState<T extends Schema, U = T>(
         return () => subscription.listeners.delete(callback);
     }, [roomState, decoder]);
 
-    return useSyncExternalStore(subscribe, getSnapshot);
+    return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot) as Snapshot<U>;
 }
