@@ -12,6 +12,26 @@ npm install @colyseus/react
 
 **Peer dependencies:** `@colyseus/sdk`, `@colyseus/schema`, and `react` (>=18.3.1).
 
+## Server-side rendering
+
+Every hook is safe to render on the server. A room is a live client-side
+connection and is never serialized for hydration, so on the server the hooks
+render as though nothing is connected — `useRoomState()` returns `undefined`,
+`useRoom()` reports `isConnecting: true`, and the predict hooks return
+`undefined`. Connection happens in an effect, so the live room arrives on the
+re-render right after hydration.
+
+Render the connecting state rather than assuming state exists:
+
+```tsx
+const players = useRoomState((state) => state.players);
+if (!players) return <Spinner />;   // server render + first client paint
+```
+
+The package ships a `"use client"` directive, so you can import it from a
+Next.js App Router Server Component without the build failing. The hooks
+themselves still run on the client, as any React hook does.
+
 ## Hooks
 
 ### `useRoom(callback, deps?)`

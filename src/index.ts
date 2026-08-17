@@ -1,3 +1,8 @@
+// Declares the package's own client boundary: without it, a Next.js App Router
+// Server Component importing any hook here fails the build outright. The
+// bundler hoists this to the top of dist/index.mjs and dist/index.cjs.
+"use client";
+
 export { useRoomState } from './schema/useRoomState';
 export { useRoom } from './room/useRoom';
 export { useRoomMessage } from './room/useRoomMessage';
