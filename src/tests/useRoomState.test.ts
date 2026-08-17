@@ -5,6 +5,9 @@ import { useRoomState } from '../schema/useRoomState';
 import { Schema, type } from '@colyseus/schema';
 import React from 'react';
 import { renderToString } from 'react-dom/server';
+import { Room } from '@colyseus/sdk';
+import { simulateState } from './schema/simulateState';
+import { MyRoomState } from './schema/MyRoomState';
 
 describe('falsy room argument', () => {
     test('types', () => {
@@ -43,6 +46,21 @@ describe('server rendering', () => {
     test('renders without falling back to client rendering', () => {
         function Probe() {
             const state = useRoomState(undefined);
+            return React.createElement('span', null, state === undefined ? 'no-state' : 'has-state');
+        }
+
+        expect(renderToString(React.createElement(Probe))).toContain('no-state');
+    });
+
+    test('a live room still yields an empty server snapshot', () => {
+        const sim = simulateState(() => new MyRoomState());
+        const room = {
+            state: sim.clientState,
+            serializer: { decoder: sim.decoder },
+        } as unknown as Room<unknown, MyRoomState>;
+
+        function Probe() {
+            const state = useRoomState(room);
             return React.createElement('span', null, state === undefined ? 'no-state' : 'has-state');
         }
 

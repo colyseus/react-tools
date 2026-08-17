@@ -2,6 +2,7 @@ import React from 'react';
 import { render, screen, act, renderHook } from '@testing-library/react';
 import { describe, expect, test, vi } from 'vitest';
 import { Room, type RoomAvailable } from '@colyseus/sdk';
+import { renderToString } from 'react-dom/server';
 import { createLobbyContext } from '../context/createLobbyContext';
 
 type Handler = (...args: any[]) => void;
@@ -78,5 +79,24 @@ describe('createLobbyContext', () => {
         expect(a.result.current.rooms.length).toBe(1);
         expect(b.result.current.rooms.length).toBe(1);
         expect(a.result.current.rooms).toBe(b.result.current.rooms);
+    });
+
+    test('useLobby uses its initial snapshot during server rendering', async () => {
+        const { room, emit } = fakeLobby();
+        const { LobbyProvider, useLobby } = createLobbyContext();
+
+        await act(async () => {
+            render(<LobbyProvider connect={() => Promise.resolve(room)}><div /></LobbyProvider>);
+        });
+        await act(async () => {
+            emit("rooms", [{ roomId: "r1" } as RoomAvailable]);
+        });
+
+        function Probe() {
+            const { rooms, room: lobbyRoom, isConnecting } = useLobby();
+            return <span>{isConnecting && !lobbyRoom && rooms.length === 0 ? 'initial' : 'live'}</span>;
+        }
+
+        expect(renderToString(<Probe />)).toContain('initial');
     });
 });

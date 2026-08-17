@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.18
+
+### Fixes
+
+- Server-rendering a component that reads room state no longer crashes with `Missing getServerSnapshot, which is required for server-rendered content`. `useRoomState`, `useColyseusState` and the `createRoomContext` / `createLobbyContext` hooks now render on the server as if no room were connected — rooms and decoder state are client-side objects, never serialized for hydration — and pick up the live room right after hydration. ([#12](https://github.com/colyseus/react-tools/pull/12) by [@under-undefined](https://github.com/under-undefined))
+
 ## 0.1.17
 
 ### Fixes

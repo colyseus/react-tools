@@ -7,7 +7,6 @@ import { createRoomContext } from '../context/createRoomContext';
 import { simulateState } from './schema/simulateState';
 import { MyRoomState, Player } from './schema/MyRoomState';
 import { renderToString } from 'react-dom/server';
-import { useRoomState as useRoomStateStandalone } from '../schema/useRoomState';
 
 type Handler = (...args: any[]) => void;
 
@@ -37,18 +36,6 @@ function fakeRoom(state: MyRoomState, decoder: any) {
 }
 
 describe('createRoomContext', () => {
-    test('standalone room state uses an empty server snapshot', () => {
-        const sim = simulateState(() => new MyRoomState());
-        const { room } = fakeRoom(sim.clientState, sim.decoder);
-
-        function Probe() {
-            const state = useRoomStateStandalone(room);
-            return <span>{state === undefined ? 'no-state' : 'has-state'}</span>;
-        }
-
-        expect(renderToString(<Probe />)).toContain('no-state');
-    });
-
     test('context hooks use their initial snapshot during server rendering', async () => {
         const sim = simulateState(() => new MyRoomState());
         const { room } = fakeRoom(sim.clientState, sim.decoder);
