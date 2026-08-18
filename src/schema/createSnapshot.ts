@@ -85,7 +85,7 @@ export interface SnapshotContext {
  * Returns the refId stored on a Schema/ArraySchema/MapSchema instance
  * by the decoder, or -1 if absent.
  */
-function getRefId(node: object): number {
+export function getRefId(node: object): number {
     const refId = (node as any)[REF_ID_KEY];
     return typeof refId === "number" ? refId : -1;
 }
@@ -102,10 +102,11 @@ function createSnapshotForMapSchema(
     let hasChanged = previousResult === undefined;
 
     for (const [key, value] of node) {
-        const snapshottedValue = createSnapshot(value, ctx);
+        const previousValue = previousResult?.[key];
+        const snapshottedValue = createSnapshot(value, ctx, previousValue);
         snapshotted[key] = snapshottedValue;
 
-        if (!hasChanged && previousResult && previousResult[key] !== snapshottedValue) {
+        if (!hasChanged && previousResult && previousValue !== snapshottedValue) {
             hasChanged = true;
         }
     }
@@ -134,12 +135,54 @@ function createSnapshotForArraySchema(
     const snapshotted: any[] = new Array(length);
 
     for (let i = 0; i < length; i++) {
-        const snapshottedValue = createSnapshot(node.at(i), ctx);
+        const previousValue = previousResult?.[i];
+        const snapshottedValue = createSnapshot(node.at(i), ctx, previousValue);
         snapshotted[i] = snapshottedValue;
 
-        if (!hasChanged && previousResult && previousResult[i] !== snapshottedValue) {
+        if (!hasChanged && previousResult && previousValue !== snapshottedValue) {
             hasChanged = true;
         }
+    }
+
+    return hasChanged ? snapshotted : previousResult!;
+}
+
+/** True for object literals (and null-prototype objects), not class instances. */
+function isPlainObject(value: unknown): value is Record<string, any> {
+    if (value === null || typeof value !== "object") return false;
+    const prototype = Object.getPrototypeOf(value);
+    return prototype === Object.prototype || prototype === null;
+}
+
+/**
+ * Creates a snapshot of a selector-built object literal with structural sharing.
+ */
+function createSnapshotForPlainObject(
+    node: Record<string, any>,
+    previousResult: Record<string, any> | undefined,
+    ctx: SnapshotContext
+): Record<string, any> {
+    const snapshotted: Record<string, any> = {};
+    let hasChanged = previousResult === undefined;
+    let keyCount = 0;
+
+    for (const key of Object.keys(node)) {
+        const value = node[key];
+        if (typeof value === "function") { continue; } // dropped, as `Snapshot` does
+
+        keyCount++;
+        const previousValue = previousResult?.[key];
+        const snapshottedValue = createSnapshot(value, ctx, previousValue);
+        snapshotted[key] = snapshottedValue;
+
+        if (!hasChanged && previousValue !== snapshottedValue) {
+            hasChanged = true;
+        }
+    }
+
+    // Dropped keys leave every survivor matching, so the count has to be checked too.
+    if (!hasChanged && Object.keys(previousResult!).length !== keyCount) {
+        hasChanged = true;
     }
 
     return hasChanged ? snapshotted : previousResult!;
@@ -166,10 +209,11 @@ function createSnapshotForSchema(
     for (const fieldName of fieldNames) {
         const value = (node as any)[fieldName];
         if (typeof value !== "function") {
-            const snapshottedValue = createSnapshot(value, ctx);
+            const previousValue = previousResult?.[fieldName];
+            const snapshottedValue = createSnapshot(value, ctx, previousValue);
             snapshotted[fieldName] = snapshottedValue;
 
-            if (!hasChanged && previousResult && previousResult[fieldName] !== snapshottedValue) {
+            if (!hasChanged && previousResult && previousValue !== snapshottedValue) {
                 hasChanged = true;
             }
         }
@@ -187,9 +231,11 @@ function createSnapshotForSchema(
  * 
  * @param node - The value to snapshot (may be a Schema, primitive, etc.)
  * @param ctx - The snapshot context with refs and previous results
+ * @param previousDerived - Prior result for a node the decoder never tagged (a
+ *   container the selector built); refId-keyed nodes ignore it and use the cache
  * @returns The snapshotted plain JavaScript value
  */
-export function createSnapshot<T>(node: T, ctx: SnapshotContext): Snapshot<T> {
+export function createSnapshot<T>(node: T, ctx: SnapshotContext, previousDerived?: any): Snapshot<T> {
     // Pass through primitives and null/undefined.
     if (node === null || node === undefined || typeof node !== "object") {
         return node as Snapshot<T>;
@@ -208,8 +254,9 @@ export function createSnapshot<T>(node: T, ctx: SnapshotContext): Snapshot<T> {
         return ctx.resultsByRefId.get(refId);
     }
 
-    // Previous-pass result for structural sharing comparison.
-    const previousResult = refId !== -1 ? ctx.resultsByRefId.get(refId) : undefined;
+    // Previous-pass result for structural sharing comparison. A selector-built
+    // container has no refId to look up, so its previous result is passed down.
+    const previousResult = refId !== -1 ? ctx.resultsByRefId.get(refId) : previousDerived;
 
     // If this ref isn't dirty and we have a previous result, the whole subtree is
     // unchanged (a descendant change would have marked this ref dirty too via the
@@ -234,8 +281,13 @@ export function createSnapshot<T>(node: T, ctx: SnapshotContext): Snapshot<T> {
     } else if (Schema.isSchema(node)) {
         result = createSnapshotForSchema(node, previousResult, ctx);
 
+    } else if (isPlainObject(node)) {
+        // Selector-built object literal: snapshot the values, so a `{ ... }` selector
+        // yields the same plain data a `[ ... ]` one does instead of leaking live nodes.
+        result = createSnapshotForPlainObject(node, previousResult, ctx);
+
     } else {
-        // Plain object or unknown type - pass through.
+        // Unknown type - pass through.
         result = node;
     }
 
