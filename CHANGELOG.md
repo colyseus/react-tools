@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.19
+
+### Fixes
+
+- Selectors that build their own container no longer crash the component with `Maximum update depth exceeded`. `useRoomState(room, (s) => Array.from(s.players.values()))` and `(s) => ({ message: s.myString })` now hold a stable reference between renders. ([#13](https://github.com/colyseus/react-tools/pull/13), reported by [@under-undefined](https://github.com/under-undefined), who also contributed the regression tests — thank you!)
+- Object-literal selectors return plain snapshot data, the way array selectors already did. `(s) => ({ player: s.players.get(id) })` previously handed back the live schema node.
+
 ## 0.1.18
 
 ### Fixes
