@@ -1,6 +1,6 @@
 {
   "name": "@colyseus/react",
-  "version": "0.18.0",
+  "version": "0.18.1",
   "type": "module",
   "scripts": {
     "dev": "tsdown --watch --format esm,cjs",
