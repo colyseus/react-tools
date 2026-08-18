@@ -1,6 +1,6 @@
 import { Schema, Decoder } from "@colyseus/schema";
 import { useCallback, useRef, useSyncExternalStore, useEffect } from "react";
-import { createSnapshot, Snapshot, SnapshotContext } from './createSnapshot';
+import { createSnapshot, getRefId, Snapshot, SnapshotContext } from './createSnapshot';
 import { getOrCreateSubscription } from './getOrCreateSubscription';
 
 // Room objects are not serialized from the server for hydration. Returning a
@@ -51,6 +51,10 @@ export function useColyseusState<T extends Schema, U = T>(
     const selectorRef = useRef(selector);
     selectorRef.current = selector;
 
+    // createSnapshot caches by refId; a container the selector builds has none, so it
+    // would hand back a fresh reference per call — an unstable useSyncExternalStore snapshot.
+    const derivedRootRef = useRef<{ roomState: T; decoder: Decoder<T>; value: Snapshot<U> }>();
+
     // The getSnapshot callback is stable, and only changes when roomState/decoder change,
     // preventing useSyncExternalStore from treating every render as a new store.
     const getSnapshot = useCallback(() => {
@@ -74,7 +78,24 @@ export function useColyseusState<T extends Schema, U = T>(
             currentParentRefId: -1, // No parent for root
         };
 
-        const result = createSnapshot(selectedState, ctx);
+        // A container the selector built has no refId, so hand its previous result
+        // down explicitly — that is the only reuse the cache cannot supply.
+        const previous = derivedRootRef.current;
+        const isDerivedRoot = selectedState !== null
+            && typeof selectedState === 'object'
+            && getRefId(selectedState) === -1;
+
+        const result = createSnapshot(
+            selectedState,
+            ctx,
+            isDerivedRoot && previous?.roomState === roomState && previous.decoder === decoder
+                ? previous.value
+                : undefined
+        );
+
+        if (isDerivedRoot) {
+            derivedRootRef.current = { roomState, decoder, value: result };
+        }
 
         // Periodically prune stale cache entries (every 100 snapshots).
         if (++subscription.cleanupCounter >= 100 && ctx.refs) {
