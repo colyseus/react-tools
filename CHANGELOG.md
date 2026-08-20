@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.18.2
+
+- Pairs with `@colyseus/sdk` 0.18.2, which merges the `smoothing`/`damping` options into one `smoothMs` (time constant in ms; `smoothMs = 1000 / old value`). No API change in the hooks themselves — option types flow through from the SDK.
+
 ## 0.18.1
 
 ### Fixes

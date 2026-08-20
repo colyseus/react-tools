@@ -1,6 +1,6 @@
 {
   "name": "@colyseus/react",
-  "version": "0.18.1",
+  "version": "0.18.2",
   "type": "module",
   "scripts": {
     "dev": "tsdown --watch --format esm,cjs",
@@ -22,13 +22,13 @@
   ],
   "peerDependencies": {
     "@colyseus/schema": "^5.0.8",
-    "@colyseus/sdk": "^0.18.1",
+    "@colyseus/sdk": "^0.18.2",
     "@colyseus/shared-types": "^0.18.1",
     "react": ">=18.3.1"
   },
   "devDependencies": {
     "@colyseus/schema": "^5.0.11",
-    "@colyseus/sdk": "^0.18.1",
+    "@colyseus/sdk": "^0.18.2",
     "@colyseus/shared-types": "^0.18.1",
     "@eslint/js": "^9.9.0",
     "@testing-library/react": "^16.3.1",

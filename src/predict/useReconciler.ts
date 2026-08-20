@@ -44,7 +44,7 @@ export type UseReconcilerOptions<S extends object, I> =
  * const me = useReconciler(
  *   room,
  *   (s, r) => s.players.get(r.sessionId),
- *   { step: (ctx, p, cmd) => applyInput(p, cmd, ctx.dt), smoothing: 15 },
+ *   { step: (ctx, p, cmd) => applyInput(p, cmd, ctx.dt), smoothMs: 65 },
  * );
  * ```
  */
