@@ -100,7 +100,7 @@ export type Snapshot<T> = DeepReadonly<
     : T extends IArray<infer U>
     ? Snapshot<U>[]
     : T extends IMap<infer K extends MapKey, infer U>
-    ? Record<K, Snapshot<U>>
+    ? Partial<Record<K, Snapshot<U>>>
     : T extends Primitive
     ? T
     : T extends object
@@ -172,11 +172,11 @@ export function getRefId(node: object): number {
  */
 function createSnapshotForMapSchema(
     node: MapSchema<any>,
-    previousResult: Record<string, any> | undefined,
+    previousResult: Partial<Record<string, any>> | undefined,
     ctx: SnapshotContext,
     isDerived: boolean
-): Record<string, any> {
-    const snapshotted: Record<string, any> = {};
+): Partial<Record<string, any>> {
+    const snapshotted: Partial<Record<string, any>> = {};
     let hasChanged = previousResult === undefined;
 
     for (const [key, value] of node) {
