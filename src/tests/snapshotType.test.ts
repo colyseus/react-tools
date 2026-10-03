@@ -44,6 +44,17 @@ expectMutual<Snapshot<PlayerState>["weapons"], { readonly [k: string]: W }>(true
 expectMutual<Snapshot<IPlayer>["loadout"], ReadonlyArray<W>>(true);
 expectMutual<Snapshot<IPlayer>["weapons"], { readonly [k: string]: W }>(true);
 
+// Finite key unions — a map need not hold every key, so entries are optional.
+type Slot = "primary" | "secondary";
+type SlotW = { readonly primary?: W; readonly secondary?: W };
+expectMutual<Snapshot<MapSchema<Weapon, Slot>>, SlotW>(true);
+expectMutual<Snapshot<ReadonlyMap<Slot, IWeapon>>, SlotW>(true);
+
+// Wide keys stay an index signature, so iterated entries are never `undefined`.
+expectMutual<Snapshot<ReadonlyMap<`p_${string}`, IWeapon>>, { readonly [k: `p_${string}`]: W }>(true);
+const values: W[] = Object.values({} as Snapshot<IPlayer>["weapons"]);
+void values;
+
 // Primitives pass through.
 expectMutual<Snapshot<number>, number>(true);
 expectMutual<Snapshot<string>, string>(true);
