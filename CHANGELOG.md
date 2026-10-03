@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.18.3
+
+- Snapshots of maps keyed by a fixed set of values (`MapSchema<V, "a" | "b">`, `IMap<SomeUnion, V>`) now make each key optional, so fixtures and mocks no longer need every key. Reading one directly (`snap.traits.damaged.x`) now needs a check or `?.`, as `map.get()` already did; string-keyed maps are unchanged. ([#14](https://github.com/colyseus/react-tools/pull/14), thanks [@FTWinston](https://github.com/FTWinston)!)
+
 ## 0.18.2
 
 - Pairs with `@colyseus/sdk` 0.18.2, which merges the `smoothing`/`damping` options into one `smoothMs` (time constant in ms; `smoothMs = 1000 / old value`). No API change in the hooks themselves — option types flow through from the SDK.
