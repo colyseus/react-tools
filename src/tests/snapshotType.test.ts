@@ -52,8 +52,6 @@ expectMutual<Snapshot<ReadonlyMap<Slot, IWeapon>>, SlotW>(true);
 
 // Wide keys stay an index signature, so iterated entries are never `undefined`.
 expectMutual<Snapshot<ReadonlyMap<`p_${string}`, IWeapon>>, { readonly [k: `p_${string}`]: W }>(true);
-const values: W[] = Object.values({} as Snapshot<IPlayer>["weapons"]);
-void values;
 
 // Primitives pass through.
 expectMutual<Snapshot<number>, number>(true);

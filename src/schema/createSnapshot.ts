@@ -85,7 +85,7 @@ type MapKey = string | number | symbol;
  */
 type MapSnapshot<K extends MapKey, V> = Record<never, never> extends Record<K, unknown>
     ? Record<K, Snapshot<V>>
-    : Partial<Record<K, Snapshot<V>>>;
+    : { [P in K]?: Snapshot<V> };
 
 /**
  * Transforms a Colyseus Schema type into an immutable, plain JavaScript type.
@@ -96,9 +96,9 @@ type MapSnapshot<K extends MapKey, V> = Record<never, never> extends Record<K, u
  * - `Schema` subclasses (and plain objects) become plain objects with only data properties
  * - Primitives remain unchanged
  *
- * Colyseus's concrete `ArraySchema`/`MapSchema` are matched first for precise
- * element inference; `ArraySchema`'s overridden member signatures don't infer
- * cleanly through `IArray`, so the structural branches only catch plain types.
+ * Colyseus's concrete `ArraySchema` is matched first for precise element
+ * inference: its overridden member signatures don't infer cleanly through
+ * `IArray`. `MapSchema` infers fine through `IMap`, so it needs no branch.
  * The internal `~refId` tag added to decoded instances is dropped — the runtime
  * snapshot only copies `@type`-decorated fields, never `~refId`.
  *
@@ -107,8 +107,6 @@ type MapSnapshot<K extends MapKey, V> = Record<never, never> extends Record<K, u
 export type Snapshot<T> = DeepReadonly<
     T extends ArraySchema<infer U>
     ? Snapshot<U>[]
-    : T extends MapSchema<infer U, infer K>
-    ? MapSnapshot<K, U>
     : T extends IArray<infer U>
     ? Snapshot<U>[]
     : T extends IMap<infer K extends MapKey, infer U>
