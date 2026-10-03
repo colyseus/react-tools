@@ -34,6 +34,22 @@ describe('Schema reference reassignment', () => {
     });
 });
 
+describe('MapSchema key lookups', () => {
+    test('keys the map lacks read as undefined, even Object.prototype names', () => {
+        const { clientState, decoder, updateState } = simulateState(() => new MyRoomState());
+        updateState((s) => { s.players.set("p1", new Player().assign({ name: "P1" })); });
+
+        const { result } = renderHook(() => useColyseusState(clientState, decoder));
+        const players = result.current.players;
+
+        for (const key of ["constructor", "toString", "hasOwnProperty", "__proto__"]) {
+            expect(players[key]).toBeUndefined();
+            expect(key in players).toBe(false);
+        }
+        expect(players.p1.name).toBe("P1");
+    });
+});
+
 describe('MapSchema clear', () => {
     test('clearing a map reallocates the map and leaves it empty', () => {
         const { clientState, decoder, updateState } = simulateState(() => new MyRoomState());

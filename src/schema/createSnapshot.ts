@@ -178,7 +178,10 @@ export function getRefId(node: object): number {
 }
 
 /**
- * Creates a snapshot of a MapSchema into a plain JavaScript object with structural sharing.
+ * Creates a snapshot of a MapSchema into a null-prototype object with structural
+ * sharing. With no prototype, a key the map doesn't hold (`"constructor"`,
+ * `"toString"`) reads as `undefined`, like `map.get()`, instead of an inherited
+ * `Object.prototype` member.
  */
 function createSnapshotForMapSchema(
     node: MapSchema<any>,
@@ -186,7 +189,7 @@ function createSnapshotForMapSchema(
     ctx: SnapshotContext,
     isDerived: boolean
 ): Record<string, any> {
-    const snapshotted: Record<string, any> = {};
+    const snapshotted: Record<string, any> = Object.create(null);
     let hasChanged = previousResult === undefined;
 
     for (const [key, value] of node) {
