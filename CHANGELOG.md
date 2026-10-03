@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.18.4
+
+- Looking up a key a map snapshot doesn't hold now returns `undefined` even for names like `"constructor"` or `"toString"`, instead of an inherited function. Map snapshots no longer inherit from `Object`, so use `Object.hasOwn(snap.players, id)` or `id in snap.players` instead of `snap.players.hasOwnProperty(id)`.
+
 ## 0.18.3
 
 - Snapshots of maps keyed by a fixed set of values (`MapSchema<V, "a" | "b">`, `IMap<SomeUnion, V>`) now make each key optional, so fixtures and mocks no longer need every key. Reading one directly (`snap.traits.damaged.x`) now needs a check or `?.`, as `map.get()` already did; string-keyed maps are unchanged. ([#14](https://github.com/colyseus/react-tools/pull/14), thanks [@FTWinston](https://github.com/FTWinston)!)
