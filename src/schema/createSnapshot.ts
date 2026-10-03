@@ -77,10 +77,22 @@ type Primitive = string | number | boolean | bigint | symbol | null | undefined;
 type MapKey = string | number | symbol;
 
 /**
+ * Plain-object form of a map snapshot. Wide keys (`string`, `` `p_${string}` ``)
+ * stay an index signature, so `Object.values()` yields defined entries. A finite
+ * key union (`"red" | "blue"`) becomes optional properties, since a map need not
+ * hold every key. The test: an empty object only satisfies a `Record` with no
+ * required keys.
+ */
+type MapSnapshot<K extends MapKey, V> = Record<never, never> extends Record<K, unknown>
+    ? Record<K, Snapshot<V>>
+    : Partial<Record<K, Snapshot<V>>>;
+
+/**
  * Transforms a Colyseus Schema type into an immutable, plain JavaScript type.
  *
  * - `ArraySchema<T>` (or `Array<T>` / `ReadonlyArray<T>`) becomes `readonly T[]`
- * - `MapSchema<T>` (or `Map<K, T>` / `ReadonlyMap<K, T>`) becomes `Readonly<Record<K, T>>`
+ * - `MapSchema<T, K>` (or `Map<K, T>` / `ReadonlyMap<K, T>`) becomes `Readonly<Record<K, T>>`,
+ *   with every key optional when `K` is a finite union (see `MapSnapshot`)
  * - `Schema` subclasses (and plain objects) become plain objects with only data properties
  * - Primitives remain unchanged
  *
@@ -95,12 +107,12 @@ type MapKey = string | number | symbol;
 export type Snapshot<T> = DeepReadonly<
     T extends ArraySchema<infer U>
     ? Snapshot<U>[]
-    : T extends MapSchema<infer U>
-    ? Record<string, Snapshot<U>>
+    : T extends MapSchema<infer U, infer K>
+    ? MapSnapshot<K, U>
     : T extends IArray<infer U>
     ? Snapshot<U>[]
     : T extends IMap<infer K extends MapKey, infer U>
-    ? Partial<Record<K, Snapshot<U>>>
+    ? MapSnapshot<K, U>
     : T extends Primitive
     ? T
     : T extends object
@@ -172,11 +184,11 @@ export function getRefId(node: object): number {
  */
 function createSnapshotForMapSchema(
     node: MapSchema<any>,
-    previousResult: Partial<Record<string, any>> | undefined,
+    previousResult: Record<string, any> | undefined,
     ctx: SnapshotContext,
     isDerived: boolean
-): Partial<Record<string, any>> {
-    const snapshotted: Partial<Record<string, any>> = {};
+): Record<string, any> {
+    const snapshotted: Record<string, any> = {};
     let hasChanged = previousResult === undefined;
 
     for (const [key, value] of node) {
